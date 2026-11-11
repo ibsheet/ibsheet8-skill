@@ -1,13 +1,13 @@
 ---
 name: ibsheet8
-description: "IBSheet8 그리드 라이브러리 개발 가이드. @ibsheet/react 의 <IBSheetReact ref={}/> 컴포넌트나 vanilla IBSheet.create() 로 그리드를 생성·수정·이벤트 처리할 때 반드시 사용. Cfg/Cols/Events 옵션 구조, loadSearchData/getSaveJson/getRowsByStatus, addRow/deleteRow/removeRow, Master-Detail cascade, Type:'Enum'/'Bool'/'Date'/'Int'/'Float' 컬럼, AddEdit/ChangeEdit/CanEdit 편집 매트릭스, onAfterChange/onSearchFinish/onFocus/onBeforeFocus/onRenderFirstFinish 이벤트, 트리 그리드, 무한 스크롤 페이징(append:1), Row Context Menu(Def.Row.Menu) 등 IBSheet8 관련 작업에 즉시 트리거. 'ibsheet', 'IB시트', '시트', '그리드 옵션', 'IBSheetReact', 'IBSheet.create', 'getSaveJson', 'loadSearchData', 'EnumKeys', 'getRowsByChecked' 표현이 등장하거나 IBSheetReact/Cfg/Cols/Events 식별자가 등장하면 로드. 단순 HTML <table>, MUI DataGrid, ag-Grid, TanStack Table 작업에는 사용하지 않음."
+description: "IBsheet 8 (JavaScript data grid) 그리드 라이브러리 개발 가이드. @ibsheet/react 의 <IBSheetReact ref={}/> 컴포넌트나 vanilla IBSheet.create() 로 그리드를 생성·수정·이벤트 처리할 때 반드시 사용. Cfg/Cols/Events 옵션 구조, loadSearchData/getSaveJson/getRowsByStatus, addRow/deleteRow/removeRow, Master-Detail cascade, Type:'Enum'/'Bool'/'Date'/'Int'/'Float' 컬럼, AddEdit/ChangeEdit/CanEdit 편집 매트릭스, onAfterChange/onSearchFinish/onFocus/onBeforeFocus/onRenderFirstFinish 이벤트, 트리 그리드, 무한 스크롤 페이징(append:1), Row Context Menu(Def.Row.Menu) 등 IBsheet 8 관련 작업에 즉시 트리거. 'ibsheet', 'IBSheet8', 'IB시트', '시트', '그리드 옵션', 'IBSheetReact', 'IBSheet.create', 'getSaveJson', 'loadSearchData', 'EnumKeys', 'getRowsByChecked' 표현이 등장하거나 IBSheetReact/Cfg/Cols/Events 식별자가 등장하면 로드. 단순 HTML <table>, MUI DataGrid, ag-Grid, TanStack Table 작업에는 사용하지 않음."
 ---
 
-# IBSheet Development Guide
+# IB Sheet Development Guide
 
-- IBSheet8 is a web grid component that can quickly display and edit large volumes of data.
-- IBSheet8 is a different product from IBSheet7, and their usage differs.
-- When converting IBSheet7 source code to IBSheet8, refer to .\references\integration\IBSheet7_to_IBSheet8_guide.md for guidance.
+- IBsheet 8 is a web grid component that can quickly display and edit large volumes of data.
+- IBsheet 8 is a different product from IBsheet 7, and their usage differs.
+- When converting IBsheet 7 source code to IBsheet 8, refer to .\references\integration\IBSheet7_to_IBSheet8_guide.md for guidance.
 
 ## Quick Start
 
@@ -82,7 +82,7 @@ mySheet.acceptChangedData();
 
 **실전 사고**: 행 1건 추가 + 텍스트 입력 후 저장 시 같은 행이 `_rowtype:'I'` + `_rowtype:'U'` 로 **두 번 전송**되었고 서버 정책에 따라 데이터 손실까지 발생.
 
-원인: IBSheet 는 신규 추가 + 값 입력한 행에 **`Added=1` 과 `Changed=1` 을 동시 마킹**한다. `getRowsByStatus('Added')` 와 `getRowsByStatus('Changed')` 를 따로 호출하면 양쪽 모두에 잡혀 같은 행이 두 번 들어간다.
+원인: IB Sheet 는 신규 추가 + 값 입력한 행에 **`Added=1` 과 `Changed=1` 을 동시 마킹**한다. `getRowsByStatus('Added')` 와 `getRowsByStatus('Changed')` 를 따로 호출하면 양쪽 모두에 잡혀 같은 행이 두 번 들어간다.
 
 ```javascript
 // ❌ 금지 — 신규행이 Added/Changed 양쪽에 잡혀 중복
@@ -112,17 +112,17 @@ const U = sheet.getRowsByStatus('!Added,Changed,!Deleted')   // ← !Added 가�
 const D = sheet.getRowsByStatus('Deleted')
 ```
 
-**Why**: IBSheet 의 행 status 는 직교 플래그(Added·Changed·Deleted 가 동시 켜질 수 있음). `getSaveJson` 은 우선순위(Added>Changed>Normal)와 Deleted 처리를 매뉴얼 명세대로 자동 해소.
+**Why**: IB Sheet 의 행 status 는 직교 플래그(Added·Changed·Deleted 가 동시 켜질 수 있음). `getSaveJson` 은 우선순위(Added>Changed>Normal)와 Deleted 처리를 매뉴얼 명세대로 자동 해소.
 
 **How to apply**: 모든 저장 직렬화에서 `getSaveJson({saveMode:2})` 사용. 변경 유무 가드는 `hasChangedData(1)` 먼저 호출하고 그 다음에 `getSaveJson` 으로 변경분 추출.
 
 ⚠️ **함정 — `getRowsByStatus('Modified')` 는 항상 빈 배열 반환**
 
-IBSheet8 의 정식 status 값은 **`'Added' / 'Changed' / 'Deleted'`** 만 존재. `'Modified'` / `'Updated'` 같은 다른 영문 status 명을 넘기면 throw 없이 **빈 배열 반환** → 변경분이 전부 누락된 채로 저장 payload 생성 → 사용자는 수정했는데 서버는 빈 dataset 수신 → 저장 200 OK 인데 DB 미반영. 실제 사고 사례에서 편집 그리드의 셀 수정이 한 라운드 통째로 송신되지 않았다. `getSaveJson({saveMode:2})` 가 매뉴얼 명세대로 자동 처리해주므로 status 문자열 직접 조립 자체를 피한다.
+IBsheet 8 의 정식 status 값은 **`'Added' / 'Changed' / 'Deleted'`** 만 존재. `'Modified'` / `'Updated'` 같은 다른 영문 status 명을 넘기면 throw 없이 **빈 배열 반환** → 변경분이 전부 누락된 채로 저장 payload 생성 → 사용자는 수정했는데 서버는 빈 dataset 수신 → 저장 200 OK 인데 DB 미반영. 실제 사고 사례에서 편집 그리드의 셀 수정이 한 라운드 통째로 송신되지 않았다. `getSaveJson({saveMode:2})` 가 매뉴얼 명세대로 자동 처리해주므로 status 문자열 직접 조립 자체를 피한다.
 
 ⚠️ **함정 — `getSaveJson` 결과의 `STATUS` + `id` 둘 다 제거 필요**
 
-`getSaveJson` 반환 row 에는 `STATUS: 'Added'|'Changed'|'Deleted'` 외에 **`id: 'AR1'/'AR2'...`** (IBSheet 내부 row 식별자, DB PK 아님) 키도 함께 들어 있다. `STATUS` 만 destructure 로 빼면 `id` 가 페이로드에 남아 백엔드 mapper 가 이를 의미 있는 식별자로 오해해 SELECT 조건/INSERT 컬럼 매핑 사고로 이어진다. 두 키 모두 명시적으로 제거:
+`getSaveJson` 반환 row 에는 `STATUS: 'Added'|'Changed'|'Deleted'` 외에 **`id: 'AR1'/'AR2'...`** (IB Sheet 내부 row 식별자, DB PK 아님) 키도 함께 들어 있다. `STATUS` 만 destructure 로 빼면 `id` 가 페이로드에 남아 백엔드 mapper 가 이를 의미 있는 식별자로 오해해 SELECT 조건/INSERT 컬럼 매핑 사고로 이어진다. 두 키 모두 명시적으로 제거:
 
 ```ts
 const { STATUS, id, ...rest } = r as { STATUS?: string; id?: string } & Record<string, unknown>
@@ -135,7 +135,7 @@ return { ...rest, _rowtype: STATUS_TO_ROWTYPE[STATUS] ?? 'U' }
 Cfg: { InEditMode: 1 }   // 셀 한 번 클릭 시 즉시 편집 모드 (default 는 두 번 클릭/Enter)
 ```
 
-**Why**: Nexacro Grid 는 `edittype='text'` 셀이 한 번 클릭만으로 편집 진입한다. IBSheet8 default 는 두 번 클릭이라 사용자가 어색하게 느낀다.
+**Why**: Nexacro Grid 는 `edittype='text'` 셀이 한 번 클릭만으로 편집 진입한다. IBsheet 8 default 는 두 번 클릭이라 사용자가 어색하게 느낀다.
 
 **How to apply**: Nexacro 화면 변환 시 편집 가능한 그리드는 모두 `Cfg.InEditMode:1` 표준. 단 readonly 그리드는 불필요.
 
@@ -149,7 +149,7 @@ Cfg: { Size: 'Small' }   // 기본 Normal 보다 컴팩트. 동적 변경은 she
 
 **How to apply**: "시트/그리드 크기 줄여줘·키워줘" 요청 = `Cfg.Size`. **살짝** 줄이기 = `Low`, 컴팩트 표준 = `Small`. 행높이만 바꾸려면 `Def.Row.Height`(Size 는 글자·아이콘까지 전부 스케일하므로 목적이 다름). 상세 스케일/CSS: `references/ibsheet-official-manual/appx/design.md`.
 
-## Nexacro 편집 그리드 → IBSheet8 변환 함정 (숫자 Format / multirow 선택 / 셀 내 아이콘버튼 / 셀 경계선)
+## Nexacro 편집 그리드 → IBsheet 8 변환 함정 (숫자 Format / multirow 선택 / 셀 내 아이콘버튼 / 셀 경계선)
 
 ⚠️ **숫자 `Format`(`#,##0`)은 `Type:'Int'`/`'Float'` 에서만 정상 — `Type:'Text'+Format` 은 자릿수 깨짐(5000→"50000")**
 원본 displaytype="number" 컬럼은 Type:'Int'/'Float'. Text+Format 은 값 10배·콤마 누락으로 렌더. **TS 빌드 통과 → 실제 렌더로만 발견**.
@@ -190,7 +190,7 @@ const dirty = sheet.getRowsByStatus('Added,Updated,Deleted').length > 0   // 0 (
 const dirty = sheet.hasChangedData(1) > 0   // 1 (true)
 ```
 
-**Why**: `getRowsByStatus` 는 IBSheet8 내부의 row state 전환(Added/Updated/Deleted) 만 감지한다. `setValue(row, col, val)` (3-arg 또는 4-arg 형태) 는 cell 값을 바꾸지만 row state 를 'Original' 그대로 두는 경우가 많다 (특히 server-loaded 행에 대한 programmatic setValue). 반면 `hasChangedData(1)` (1=dataonly) 는 data 영역의 모든 변경을 검사하므로 setValue 결과도 정확히 1 반환.
+**Why**: `getRowsByStatus` 는 IBsheet 8 내부의 row state 전환(Added/Updated/Deleted) 만 감지한다. `setValue(row, col, val)` (3-arg 또는 4-arg 형태) 는 cell 값을 바꾸지만 row state 를 'Original' 그대로 두는 경우가 많다 (특히 server-loaded 행에 대한 programmatic setValue). 반면 `hasChangedData(1)` (1=dataonly) 는 data 영역의 모든 변경을 검사하므로 setValue 결과도 정확히 1 반환.
 
 **How to apply**:
 - "행 위치 이동하면 변경 사라집니다" / "변경된 데이터가 없습니다" 등 **dirty 체크가 필요한 모든 곳에 `hasChangedData(1)` 사용**.
@@ -254,7 +254,7 @@ onRenderFirstFinish: (evt) => {
 
 ## `Col.Required: 1` — 헤더 필수 표시 + 저장 검증
 
-원본 XFDL `<Cell text="..." cssclass="Essential"/>` 는 IBSheet8 에서 `Col.Required: 1` 으로 변환:
+원본 XFDL `<Cell text="..." cssclass="Essential"/>` 는 IBsheet 8 에서 `Col.Required: 1` 으로 변환:
 
 ```javascript
 { Header: t('grid.code'), Name: 'code', Required: 1 }   // 헤더에 필수 마크 + getSaveJson 자동 검증
@@ -264,7 +264,7 @@ onRenderFirstFinish: (evt) => {
 
 ## ⚠ 공식 이벤트명만 사용 — 임의 이름 금지
 
-IBSheet8 표준 이벤트는 `onClick`, `onAfterClick`, `onDblClick`, `onAfterChange`, `onBeforeChange`, `onSearchFinish`, `onRenderFirstFinish`, `onFocus`, `onEditStart` 등. 비슷해 보이는 임의 이름은 인식되지 않는다.
+IBsheet 8 표준 이벤트는 `onClick`, `onAfterClick`, `onDblClick`, `onAfterChange`, `onBeforeChange`, `onSearchFinish`, `onRenderFirstFinish`, `onFocus`, `onEditStart` 등. 비슷해 보이는 임의 이름은 인식되지 않는다.
 
 ## ⚠ `Type:'Bool'` + `HeaderCheck:1` 컬럼 4종 함정
 
@@ -273,7 +273,7 @@ IBSheet8 표준 이벤트는 `onClick`, `onAfterClick`, `onDblClick`, `onAfterCh
 1. **`TrueValue:'0'` (string) `setAllCheck` NO-OP 버그** — string `'0'` 만 호출 효과 없음. 반드시 `TrueValue: 1, FalseValue: 0` (number) 로 통일 + `as unknown as IBCol` 캐스팅
 2. **`Header: ''` 빈 문자열 → 컬럼 Name fallback 표시** ("chkYn" 같은 raw 식별자가 헤더에 노출). 반드시 `Header: { Value: '', HeaderCheck: 1, IconAlign: 'Center' }` 객체 형태
 3. **사용자 좌표 클릭 시 헤더 시각 ✓ 갱신 누락 race** — `AllCheckIgnoreEvent: 1` 미적용 화면에서 사용자 클릭만 사고 (`setAllCheck()` 프로그래밍은 정상). 권장: `AllCheckIgnoreEvent: 1` + `onCheckAllFinish`. 차선: `setTimeout(0)` 으로 `setAttribute(sheet.Header, col, 'Checked', val, 1)` defer
-4. **헤더 체크박스 좌측 치우침 — `Header.Value: ' '`(공백) 절대 금지** 🚨 — `Header.Value` 를 빈 문자열 `''` 이 아닌 **공백 `' '`** 으로 두면 `IconAlign:'Center'` 가 무효화되어 헤더 체크박스가 좌측 정렬됨 (`IBGYSideLeft`, background-position `5px`). 반드시 **`Value: ''` (빈 문자열)** → `IBGYSideCenter` (background-position `50%`) 로 가운데 정렬. ⚠ IBSheet 공식 매뉴얼 `props/col/header` 의 "빈 헤더는 공백 필요(`Header:" "`)" 안내는 **일반 텍스트 헤더 한정** — HeaderCheck 컬럼엔 적용하면 안 됨. `IconAlign:'Center'` 는 헤더가 아닌 body Icon 용 같지만 **Value 가 빈 문자열일 때만** 헤더 체크박스에도 `IBGYSideCenter` 를 부여하는 부수효과가 있음(실측). 결론: HeaderCheck 컬럼 = `{ Value: '', HeaderCheck: 1, IconAlign: 'Center' }` 고정. (실측: 개발용 갤러리 페이지 + Playwright `IBSheet.create` — `''`→bg-position `50%`/SideCenter, `' '`→`5px`/SideLeft 확인)
+4. **헤더 체크박스 좌측 치우침 — `Header.Value: ' '`(공백) 절대 금지** 🚨 — `Header.Value` 를 빈 문자열 `''` 이 아닌 **공백 `' '`** 으로 두면 `IconAlign:'Center'` 가 무효화되어 헤더 체크박스가 좌측 정렬됨 (`IBGYSideLeft`, background-position `5px`). 반드시 **`Value: ''` (빈 문자열)** → `IBGYSideCenter` (background-position `50%`) 로 가운데 정렬. ⚠ IB Sheet 공식 매뉴얼 `props/col/header` 의 "빈 헤더는 공백 필요(`Header:" "`)" 안내는 **일반 텍스트 헤더 한정** — HeaderCheck 컬럼엔 적용하면 안 됨. `IconAlign:'Center'` 는 헤더가 아닌 body Icon 용 같지만 **Value 가 빈 문자열일 때만** 헤더 체크박스에도 `IBGYSideCenter` 를 부여하는 부수효과가 있음(실측). 결론: HeaderCheck 컬럼 = `{ Value: '', HeaderCheck: 1, IconAlign: 'Center' }` 고정. (실측: 개발용 갤러리 페이지 + Playwright `IBSheet.create` — `''`→bg-position `50%`/SideCenter, `' '`→`5px`/SideLeft 확인)
 5. **체크박스 자체가 토글 안 됨 + 헤더 전체체크 0건 — `Cfg.CanEdit: 0` 함정** 🚨 — 그리드 레벨 `Cfg.CanEdit: 0` 이면 컬럼 `CanEdit: 1` 이 **무시**되어 체크박스 클릭/헤더 전체체크가 전혀 안 됨 (`setAllCheck` → 0건). 조회결과 그리드처럼 표시 컬럼은 읽기전용이고 체크박스만 편집해야 하면 → `Cfg.CanEdit: 1` + `Def: { Col: { CanEdit: 0 } }` (표시 컬럼 일괄 잠금) + `_CHK` 컬럼만 `CanEdit: 1`(Def override). (실측: 개발용 갤러리 페이지 + `loadSearchData sync:1` — `CanEdit:0`→전체체크 0/3, `CanEdit:1`+Def→3/3. TrueValue/FalseValue 명시는 결과 무관 → 불필요). Nexacro 의 `griduserproperty="checkboxall"` 가 이 패턴에 대응된다.
 6. **Bool 은 커서 편집이 없다(`onStartEdit` 미발화) → Tab 이동 체인에서 멈춤** — `Type:'Bool'` 은 클릭 토글만 있고 에디터 진입이 없어 `StartEdit` 해도 편집 모드로 안 들어간다. Tab 자동 이동(`Actions` 표현식)에서 Bool 셀은 "편집 시작" 체인이 끊겨 그 자리에 멈춘다. 편집불가 컬럼 건너뛰는 Tab 커스터마이징은 `references/core/advanced-patterns.md` "그리드 Tab/Shift+Tab 이동" 섹션 참조.
 
@@ -295,9 +295,9 @@ Events: {
 }
 ```
 
-**Why**: IBSheet 는 이벤트명 prefix matching 안 함. 매뉴얼에 명시된 정확한 이름만 wiring.
+**Why**: IB Sheet 는 이벤트명 prefix matching 안 함. 매뉴얼에 명시된 정확한 이름만 wiring.
 
-**How to apply**: 그리드 옵션 빌더 함수가 외부 콜백을 prop 으로 받을 때 prop 이름이 비슷해도 **반드시 Events 블록 안에서 표준 이벤트명으로 wiring** 해야 IBSheet 에 등록됨.
+**How to apply**: 그리드 옵션 빌더 함수가 외부 콜백을 prop 으로 받을 때 prop 이름이 비슷해도 **반드시 Events 블록 안에서 표준 이벤트명으로 wiring** 해야 IB Sheet 에 등록됨.
 
 ```javascript
 function buildOptions({ onDblClick, onAfterChange }) {  // prop 이름은 자유
@@ -313,7 +313,7 @@ function buildOptions({ onDblClick, onAfterChange }) {  // prop 이름은 자유
 
 ⚠️ **함정 — 행 선택 이벤트는 `onClick` 이 아니라 `onFocus` 가 정공**
 
-Nexacro `ds_xxx_onrowposchanged` 대응으로 IBSheet 행 선택 핸들러를 작성할 때 `onClick` 으로 wiring 하면 헤더/필터/버튼 클릭에도 발화하고, `evt.row` 가 IBRow 메타 객체라 컬럼 직접 키 접근(`evt.row.userId`)이 환경별로 깨질 수 있다. 정공은 **`onFocus` + `evt.sheet.getValue(evt.row, 'colName')`**.
+Nexacro `ds_xxx_onrowposchanged` 대응으로 IB Sheet 행 선택 핸들러를 작성할 때 `onClick` 으로 wiring 하면 헤더/필터/버튼 클릭에도 발화하고, `evt.row` 가 IBRow 메타 객체라 컬럼 직접 키 접근(`evt.row.userId`)이 환경별로 깨질 수 있다. 정공은 **`onFocus` + `evt.sheet.getValue(evt.row, 'colName')`**.
 
 ```javascript
 // ❌ onClick — 헤더/필터/버튼 클릭에도 발화, IBRow 직접 캐스팅 불안정
@@ -341,13 +341,13 @@ Events: {
 }
 ```
 
-**Why**: `onClick` 은 모든 셀 클릭에 발화하지만 헤더 / 필터 / 버튼 컬럼까지 포함하여 행 선택 의미가 흐려진다. `onFocus` 는 IBSheet8 행 포커스(=행 변경) 시점에만 발화하여 `onrowposchanged` 와 의미가 1:1 매칭. 컬럼 접근도 `evt.sheet.getValue(evt.row, ...)` 가 IBSheet 버전/설정 무관 안정.
+**Why**: `onClick` 은 모든 셀 클릭에 발화하지만 헤더 / 필터 / 버튼 컬럼까지 포함하여 행 선택 의미가 흐려진다. `onFocus` 는 IBsheet 8 행 포커스(=행 변경) 시점에만 발화하여 `onrowposchanged` 와 의미가 1:1 매칭. 컬럼 접근도 `evt.sheet.getValue(evt.row, ...)` 가 IB Sheet 버전/설정 무관 안정.
 
 **How to apply**: 사원/고객 선택 → 우측 패널 갱신 같은 Master/Detail 패턴은 모두 `onFocus`. 단순 셀 클릭(Button 컬럼 등)은 `onClick`. 자세한 가드 패턴은 `references/core/advanced-patterns.md` "Focus / Selection".
 
 🚨 **함정 — "동일 행 재포커스 skip" 가드를 `evt.row.Index === evt.orow.Index` 로 짜면 cascade 가 전부 죽는다**
 
-IBSheet8 의 onFocus 이벤트 row 객체에는 **`.Index` 속성이 없다** (undefined). 따라서 `evt.row?.Index === evt.orow?.Index` 는 **항상 `undefined === undefined → true`** 가 되어 **모든 행 포커스 변경에서 early return** → 마스터 클릭 시 디테일 조회가 첫 행(명시 호출분) 외에는 전혀 안 뜬다. TS 빌드 통과(옵셔널 체이닝) + 첫 행은 코드가 직접 로드해서 가려짐 → "2번째 행부터 상세가 안 바뀜" 회귀로 길게 헤맴.
+IBsheet 8 의 onFocus 이벤트 row 객체에는 **`.Index` 속성이 없다** (undefined). 따라서 `evt.row?.Index === evt.orow?.Index` 는 **항상 `undefined === undefined → true`** 가 되어 **모든 행 포커스 변경에서 early return** → 마스터 클릭 시 디테일 조회가 첫 행(명시 호출분) 외에는 전혀 안 뜬다. TS 빌드 통과(옵셔널 체이닝) + 첫 행은 코드가 직접 로드해서 가려짐 → "2번째 행부터 상세가 안 바뀜" 회귀로 길게 헤맴.
 
 ```javascript
 // ❌ .Index 는 IBSheet8 row 에 없음 → undefined===undefined → 항상 return (cascade 전멸)
@@ -366,7 +366,7 @@ onFocus: (evt) => {
 }
 ```
 
-**Why**: IBSheet8 row 의 행 위치는 `.Index` 프로퍼티가 아니라 `sheet.getRowIndex(row)` (1-based) 로 얻는다. 동일/상이 행 판정은 row 객체 자체 비교(`evt.row === evt.orow`)가 정확 (probe 실측: `sameObj:false` 로 두 행 구분됨). 컬럼 값은 `getValue` 로 (직접 키 접근은 위 §행 선택 이벤트 함정대로 환경별로 깨질 수 있음).
+**Why**: IBsheet 8 row 의 행 위치는 `.Index` 프로퍼티가 아니라 `sheet.getRowIndex(row)` (1-based) 로 얻는다. 동일/상이 행 판정은 row 객체 자체 비교(`evt.row === evt.orow`)가 정확 (probe 실측: `sameObj:false` 로 두 행 구분됨). 컬럼 값은 `getValue` 로 (직접 키 접근은 위 §행 선택 이벤트 함정대로 환경별로 깨질 수 있음).
 
 **판정 신호**: "마스터 그리드 첫 행은 디테일 뜨는데 2번째 행부터 안 바뀐다" / "행 클릭해도 하단 그리드 그대로". onFocus 가드에 `.Index` 가 보이면 100% 이 함정. 선례: 변경이력 cascade 화면 (E2E 로 발견 — `getFocusedRow`=162 인데 detail 미호출로 확진).
 
@@ -414,7 +414,7 @@ await executeRequest(svc, ...)  // await
 setTstMdctList(serverSeqSaved) // 두 번째 — useEffect 가 다시 loadSearchData
 ```
 
-→ IBSheet 가 두 번째 loadSearchData 를 **부분 반영**해 일부 셀은 calcSeqRows 의 값이 남고 다른 셀은 serverSeqSaved 값을 표시. number 표시 컬럼이 한 tier 다른 값으로 나오는 등 mismatch 발생.
+→ IB Sheet 가 두 번째 loadSearchData 를 **부분 반영**해 일부 셀은 calcSeqRows 의 값이 남고 다른 셀은 serverSeqSaved 값을 표시. number 표시 컬럼이 한 tier 다른 값으로 나오는 등 mismatch 발생.
 
 **해결 패턴**: 단일 setTstMdctList 로 단순화. 초기 placeholder 는 가격 컬럼 비워두고, server 응답이 도착하면 그것으로만 setTstMdctList — calcInsu 결과로 setTstMdctList 하지 말 것.
 
@@ -433,7 +433,7 @@ if (r.list.length > 0) {
 
 ⚠️ **함정 — 행별 동적 속성은 `{Prop}Formula` 접미사 (`AttributeFormula.{Prop}` 객체는 비표준)**
 
-행별로 ButtonText / TextColor / Color / CanEdit 등을 동적으로 바꿀 때, **존재하지 않는 `AttributeFormula` 옵션에 객체로 묶어 넣으면 IBSheet8 가 키 자체를 인식 못 한다**. 빌드는 통과(any 캐스팅), 런타임은 silent fail — 버튼 텍스트가 raw placeholder 로 노출되거나 색상이 안 먹는 회귀로 길게 헤맨다.
+행별로 ButtonText / TextColor / Color / CanEdit 등을 동적으로 바꿀 때, **존재하지 않는 `AttributeFormula` 옵션에 객체로 묶어 넣으면 IBsheet 8 가 키 자체를 인식 못 한다**. 빌드는 통과(any 캐스팅), 런타임은 silent fail — 버튼 텍스트가 raw placeholder 로 노출되거나 색상이 안 먹는 회귀로 길게 헤맨다.
 
 ```javascript
 // ❌ AttributeFormula 라는 옵션은 IBSheet8 에 없음 — 무시됨
@@ -476,11 +476,11 @@ Cols: [
 ]
 ```
 
-**Why**: IBSheet8 의 속성 Formula 는 `ColorFormula` / `TextColorFormula` / `CanEditFormula` / `FormatFormula` 처럼 **항상 `{속성명}Formula` 접미사 컬럼 옵션** ([attribute-formula.md](references/features/attribute-formula.md)). `AttributeFormula` 라는 묶음 옵션은 매뉴얼에 존재하지 않음.
+**Why**: IBsheet 8 의 속성 Formula 는 `ColorFormula` / `TextColorFormula` / `CanEditFormula` / `FormatFormula` 처럼 **항상 `{속성명}Formula` 접미사 컬럼 옵션** ([attribute-formula.md](references/features/attribute-formula.md)). `AttributeFormula` 라는 묶음 옵션은 매뉴얼에 존재하지 않음.
 
 **How to apply**: Type:'Button' 의 동적 텍스트는 1순위로 **셀 값 직접 채우기** (Name 컬럼에 텍스트 저장) — Formula 무관, CalcOrder 셋업 불필요. 색상/CanEdit 처럼 데이터 외 속성은 `{Prop}Formula` 접미사 + Def 설정. 어느 쪽도 `AttributeFormula` 객체 형태는 없다.
 
-**같은 silent-fail 사례 — `CanEditCallback`**: 직관적이지만 IBSheet8 표준 아님. 정공은 `CanEditFormula` (Formula 접미사) + `Def.Row.CalcOrder` 에 `{컬럼명}CanEdit` 등록. `Callback` / `Handler` 같은 직관적 이름은 매뉴얼에 등재 안 된 경우 silent fail (옵션 객체에는 저장되지만 호출 안 됨).
+**같은 silent-fail 사례 — `CanEditCallback`**: 직관적이지만 IBsheet 8 표준 아님. 정공은 `CanEditFormula` (Formula 접미사) + `Def.Row.CalcOrder` 에 `{컬럼명}CanEdit` 등록. `Callback` / `Handler` 같은 직관적 이름은 매뉴얼에 등재 안 된 경우 silent fail (옵션 객체에는 저장되지만 호출 안 됨).
 
 ```javascript
 // ❌ CanEditCallback — 비표준, 모든 행 편집 가능 상태로 폴백
@@ -530,7 +530,7 @@ Cols: [{ Name: 'SEQ', Type: 'Int', NoColor: 1 }, /* ...데이터 컬럼은 밴�
 > 참고: 월별 통계 화면 (분류 그룹 밴딩 + No 컬럼 제외)
 
 ⚠️ **함정 — 입력 길이 제한은 `Col.Size` (MaxLength 는 인식 안 됨)**
-실시간 입력 글자수 제한 정식 옵션은 **`Size: number`** ([props/col/size](https://docs.ibsheet.com/ibsheet/v8/manual/#docs/props/col/size)). `MaxLength` 는 IBSheet8 매뉴얼에 등재되지 않은 옵션 — 옵션 객체에는 들어가지만 렌더링 / 입력 처리 단계에서 무시되어 **실시간 제한이 안 걸린다**.
+실시간 입력 글자수 제한 정식 옵션은 **`Size: number`** ([props/col/size](https://docs.ibsheet.com/ibsheet/v8/manual/#docs/props/col/size)). `MaxLength` 는 IBsheet 8 매뉴얼에 등재되지 않은 옵션 — 옵션 객체에는 들어가지만 렌더링 / 입력 처리 단계에서 무시되어 **실시간 제한이 안 걸린다**.
 
 ```javascript
 // ❌ 입력 제한 안 걸림 (IBSheet 가 무시)
@@ -540,7 +540,7 @@ Cols: [{ Name: 'SEQ', Type: 'Int', NoColor: 1 }, /* ...데이터 컬럼은 밴�
 { Type: 'Text', Name: 'fixgNo', Size: 2 }
 ```
 
-Nexacro `editmaxlength="7"` → IBSheet8 `Size: 7` 로 변환. [UnicodeByteMode](references/ibsheet-official-manual/props/cfg/unicode-byte-mode.md) 설정 시 한글 바이트 수 계산.
+Nexacro `editmaxlength="7"` → IBsheet 8 `Size: 7` 로 변환. [UnicodeByteMode](references/ibsheet-official-manual/props/cfg/unicode-byte-mode.md) 설정 시 한글 바이트 수 계산.
 
 ## `Col.EditMask` vs `Cfg.EditMaskFunc` — 입력 검증 vs 자동 포맷팅 선택 기준
 
@@ -581,7 +581,7 @@ EditMask: '^\\S*$'           // 공백 제외 모든 글자
 
 근거: `references/ibsheet-official-manual/props/col/edit-mask.md` / `references/ibsheet-official-manual/props/cfg/edit-mask-func.md`.
 
-⚠️ **함정 — Nexacro `editinputmode="upper"` (입력 즉시 대문자) 는 IBSheet8 에 전용 옵션이 없다 → `onAfterChange` 에서 `toUpperCase`**
+⚠️ **함정 — Nexacro `editinputmode="upper"` (입력 즉시 대문자) 는 IBsheet 8 에 전용 옵션이 없다 → `onAfterChange` 에서 `toUpperCase`**
 
 `EditMask` / `ResultMask` 는 **입력 허용/종료 검사** 일 뿐 대소문자 **변환** 기능이 아니다. Nexacro `editinputmode="upper"` 대응은 `onAfterChange`(편집 종료 시점) 에서 직접 변환한다. `setValue` 5번째 인자 `{ OnChange: true }` 로 재발화를 막아 무한 루프를 방지한다.
 
@@ -604,7 +604,7 @@ onAfterChange: (evt) => {
 
 ## ⚠️ 셀 편집 "즉시저장" 은 Enter 키 커밋에만 — `onAfterChange` 는 blur 에서도 발화한다
 
-원본 Nexacro `grd_list_onenterdown` 은 셀 편집 후 **Enter 키로 커밋했을 때만** 즉시저장 SVC 를 호출한다 (다른 셀 클릭/탭 이동으로 빠져나가는 blur 커밋은 저장 안 함). IBSheet8 `onAfterChange` 는 **Enter 커밋과 blur 커밋을 구분하지 않고 둘 다 발화**하므로, `onAfterChange` 에 바로 저장을 걸면 **셀을 건드린 뒤 다른 곳을 클릭만 해도 매번 POST** 가 나간다 (ASIS 불일치 + 과도한 저장).
+원본 Nexacro `grd_list_onenterdown` 은 셀 편집 후 **Enter 키로 커밋했을 때만** 즉시저장 SVC 를 호출한다 (다른 셀 클릭/탭 이동으로 빠져나가는 blur 커밋은 저장 안 함). IBsheet 8 `onAfterChange` 는 **Enter 커밋과 blur 커밋을 구분하지 않고 둘 다 발화**하므로, `onAfterChange` 에 바로 저장을 걸면 **셀을 건드린 뒤 다른 곳을 클릭만 해도 매번 POST** 가 나간다 (ASIS 불일치 + 과도한 저장).
 
 ```ts
 // ✅ onKeyDown 에서 Enter 플래그를 세우고, onAfterChange 는 그 플래그일 때만 저장
@@ -622,9 +622,9 @@ onAfterChange: (evt) => {
 
 **Why**: blur 자동저장은 사용자가 의도치 않은 편집 잔상까지 서버로 보내고, ASIS 의 "Enter 로 확정" UX 와 어긋난다. **How to apply**: 원본에 `onenterdown`/`onkeydown` 의 `KEY_ENTER` 분기로 저장하는 셀편집 그리드는 반드시 Enter 게이트. 검증: Enter→POST 1건 / blur→POST 0건. (출처: 세부·조치내용 즉시저장 그리드)
 
-## 🎯 `Name:'SEQ'` — 자동 행번호 컬럼 (IBSheet8 예약 컬럼명)
+## 🎯 `Name:'SEQ'` — 자동 행번호 컬럼 (IBsheet 8 예약 컬럼명)
 
-`Name` 을 정확히 `'SEQ'` (대문자) 로 두면 컬럼 `Type` 과 무관하게 IBSheet8 가 자동으로 `1,2,3...` 을 채운다. 응답 데이터에 해당 필드 없어도 됨. Sort/Filter/`hideRow`/`removeRow` 후에도 항상 1부터 재번호. 편집 불가.
+`Name` 을 정확히 `'SEQ'` (대문자) 로 두면 컬럼 `Type` 과 무관하게 IBsheet 8 가 자동으로 `1,2,3...` 을 채운다. 응답 데이터에 해당 필드 없어도 됨. Sort/Filter/`hideRow`/`removeRow` 후에도 항상 1부터 재번호. 편집 불가.
 
 ```javascript
 // ✅ 한 줄로 끝 — 데이터 매핑/Formula/setValue 전부 불필요
@@ -652,7 +652,7 @@ onAfterChange: (evt) => {
 sheet.getDataRows().forEach((r,i) => sheet.setValue(r, 'no', i+1, 1))
 ```
 
-**Why**: IBSheet8 매뉴얼이 `SEQ` 를 예약 컬럼명으로 명시 (`SEQ, id, Status, Level, ColorPos, GroupPos, Hasch, LevelImg, OrgIndex, SUMType`). 대소문자 구분.
+**Why**: IBsheet 8 매뉴얼이 `SEQ` 를 예약 컬럼명으로 명시 (`SEQ, id, Status, Level, ColorPos, GroupPos, Hasch, LevelImg, OrgIndex, SUMType`). 대소문자 구분.
 
 **How to apply**: Nexacro Grid 의 `griduserproperty="no"` / `<Cell text="No"/>` / `<Cell text="순번"/>` 가 보이면 데이터 컬럼 따로 만들지 말고 위 한 줄로 끝. 체크박스 + 순번 동시 변환 패턴은 `references/core/advanced-patterns.md` "행 번호 컬럼" 섹션 참조.
 
@@ -669,7 +669,7 @@ sheet.getDataRows().forEach((r,i) => sheet.setValue(r, 'no', i+1, 1))
 .cell_SeqNo { background:#818181 !important; color:#fff !important }
 ```
 
-- **셀 배경색은 반드시 `Class`(CSS)** — IBSheet8 은 `CellBackColor`/`background` 속성을 무시한다 (행색상 cell_Bg* 패턴과 동일 원리).
+- **셀 배경색은 반드시 `Class`(CSS)** — IBsheet 8 은 `CellBackColor`/`background` 속성을 무시한다 (행색상 cell_Bg* 패턴과 동일 원리).
 - **"순번=Align:Center 한 줄" 같은 프로젝트 기본 규칙도 ASIS 가 다르면 ASIS 우선** — 자동번호 규칙(Type:'Text'/Formula 금지)은 지키되 Align/Header 는 원본 `textAlign`/헤더 텍스트를 따른다. (출처: 목록 그리드 변환 사례)
 
 ⚠️ **함정 — `loadSearchData` 의 2번째 위치 인자는 `append` (조회 시 그리드 누적 사고)**
@@ -691,10 +691,10 @@ sheet.loadSearchData({ data: rows, sync: 1 })
 
 ⚠️ **함정 — `loadSearchData` 직전 응답 row sanitize 필수 (null/undefined → '' + Bool 컬럼 응답 _CHK 충돌)**
 
-응답 row 에 `null/undefined` 가 있는 컬럼이 IBSheet 내부 `RefreshRow` → `charCodeAt(undefined)` 폭주의 1순위 원인. 특히 두 케이스 자주 발생:
+응답 row 에 `null/undefined` 가 있는 컬럼이 IB Sheet 내부 `RefreshRow` → `charCodeAt(undefined)` 폭주의 1순위 원인. 특히 두 케이스 자주 발생:
 
-1. **백엔드 모델이 `_CHK` 필드 보유** — Java `@Column(name="_CHK") private String _CHK;` 가 있으면 응답 JSON 에 `"_CHK": ""` (string) 포함. React 측 IBSheet Bool 컬럼 `_CHK` 가 string 값 받아 `boolToValue` 처리 시 charCodeAt 에러 → `'loadSearchData' 함수에서 오류가 발생하였습니다` + 그리드 빈 채로.
-2. **응답 컬럼 일부 null** — 미입력 필드(`avrgVal`, `sd`, `zscore`, `chgrNm` 등) 가 null. IBSheet 가 cell value 의 charCodeAt 시도 시 crash.
+1. **백엔드 모델이 `_CHK` 필드 보유** — Java `@Column(name="_CHK") private String _CHK;` 가 있으면 응답 JSON 에 `"_CHK": ""` (string) 포함. React 측 IB Sheet Bool 컬럼 `_CHK` 가 string 값 받아 `boolToValue` 처리 시 charCodeAt 에러 → `'loadSearchData' 함수에서 오류가 발생하였습니다` + 그리드 빈 채로.
+2. **응답 컬럼 일부 null** — 미입력 필드(`avrgVal`, `sd`, `zscore`, `chgrNm` 등) 가 null. IB Sheet 가 cell value 의 charCodeAt 시도 시 crash.
 
 ✅ **정공 — loadSearchData 직전 일괄 sanitize 헬퍼**:
 
@@ -719,13 +719,13 @@ useEffect(() => {
 }, [rows])
 ```
 
-**Why**: IBSheet8 의 내부 cell rendering 이 cell value 의 `charCodeAt(0)` 을 호출하는 코드 경로가 다수. value 가 undefined/null/객체 면 즉시 throw. `String(v)` 강제 + null `''` 으로 정리하면 RefreshRow / RedrawBody / Scroll 모든 경로 안전.
+**Why**: IBsheet 8 의 내부 cell rendering 이 cell value 의 `charCodeAt(0)` 을 호출하는 코드 경로가 다수. value 가 undefined/null/객체 면 즉시 throw. `String(v)` 강제 + null `''` 으로 정리하면 RefreshRow / RedrawBody / Scroll 모든 경로 안전.
 
 **How to apply**: 응답 받자마자 `setRows(rows)` — state 는 raw 유지. loadSearchData 직전에만 sanitize 적용 (함수형 Format 폭주 함정과 같은 원리 — Format 함수 대신 사전 변환).
 
 ⚠️ **함정 — `CanFocus: 0` 박으면 `onFocus` 이벤트 발화 안 함 (행 선택 추적 깨짐)**
 
-readonly 셀의 파란 포커스 박스가 시각상 거슬려 `Def.Col.CanFocus: 0` + 컬럼 별 `CanFocus: 0` 박으면 IBSheet8 의 `onFocus` 이벤트 자체가 발화 안 한다. `focusedRowKeyRef` 가 영구 null → 마스터-디테일 cascade, 담당자해제/체크 0 fallback 등 **행 선택 의존 로직 전부 깨짐** ("선택된 행이 없습니다" 발화).
+readonly 셀의 파란 포커스 박스가 시각상 거슬려 `Def.Col.CanFocus: 0` + 컬럼 별 `CanFocus: 0` 박으면 IBsheet 8 의 `onFocus` 이벤트 자체가 발화 안 한다. `focusedRowKeyRef` 가 영구 null → 마스터-디테일 cascade, 담당자해제/체크 0 fallback 등 **행 선택 의존 로직 전부 깨짐** ("선택된 행이 없습니다" 발화).
 
 ```javascript
 // ❌ readonly 셀 포커스 박스 차단 의도 — onFocus 자동 차단되어 행 선택 추적 불가
@@ -747,15 +747,15 @@ Cfg: { CanEdit: 1, IgnoreFocused: 2 },
 Def: { Row: { CanFocus: 1 }, Col: { CanEdit: 0 } }, // CanFocus 미설정 = default 1
 ```
 
-**시각 포커스 박스 차단은 CSS 로 별도 처리** (IBSheet 옵션으로는 onFocus 살리면서 포커스 박스만 끄는 옵션 X — `Cfg.NoFocus` 는 비표준).
+**시각 포커스 박스 차단은 CSS 로 별도 처리** (IB Sheet 옵션으로는 onFocus 살리면서 포커스 박스만 끄는 옵션 X — `Cfg.NoFocus` 는 비표준).
 
-**Why**: `CanFocus:0` 의 매뉴얼 정의 "포커스 진입 불가" 는 키보드 탭 이동 시 컬럼 건너뛰기 + 마우스 클릭으로도 cell focus state 변경 안 됨 → IBSheet 가 `onFocus` 이벤트 trigger 자체를 안 함. 행 선택 의존 로직(C3 — 체크 0건 시 포커스 행 자동 체크 등) 이 모두 무력화.
+**Why**: `CanFocus:0` 의 매뉴얼 정의 "포커스 진입 불가" 는 키보드 탭 이동 시 컬럼 건너뛰기 + 마우스 클릭으로도 cell focus state 변경 안 됨 → IB Sheet 가 `onFocus` 이벤트 trigger 자체를 안 함. 행 선택 의존 로직(C3 — 체크 0건 시 포커스 행 자동 체크 등) 이 모두 무력화.
 
 **How to apply**: `IgnoreFocused: 2` (이미 디테일 그리드에 권장) 로 키보드 ↑↓ 이동 시 다른 그리드 포커스 영향 차단 가능. 셀 클릭 시 포커스 박스 시각 노출이 거슬려도 onFocus 발화는 필수 — CSS 로 시각 박스만 차단할지 사용자와 trade-off.
 
 ⚠️ **함정 — `Type:'Enum'` 비동기 콤보 응답 시 raw 값이 버려진다 → `EnumStrictMode: 1` 필수**
 
-콤보 옵션이 별도 API 로 비동기 로드되는 화면에서 `setData`(또는 `loadSearchData`) 가 응답 도착 **전에** 호출되면, IBSheet8 기본 동작은 EnumKeys 에 없는 raw 값을 **무시(=버려짐)**. 이후 콤보가 늦게 도착해도 이미 버려진 값은 복구 불가 → 사용자 환경에서 빈 ▼ 만 영구 표시. 같은 코드를 Playwright 빠른 환경에서 돌리면 정상이라 회귀로 오인되기 쉽다.
+콤보 옵션이 별도 API 로 비동기 로드되는 화면에서 `setData`(또는 `loadSearchData`) 가 응답 도착 **전에** 호출되면, IBsheet 8 기본 동작은 EnumKeys 에 없는 raw 값을 **무시(=버려짐)**. 이후 콤보가 늦게 도착해도 이미 버려진 값은 복구 불가 → 사용자 환경에서 빈 ▼ 만 영구 표시. 같은 코드를 Playwright 빠른 환경에서 돌리면 정상이라 회귀로 오인되기 쉽다.
 
 ```javascript
 // ❌ 기본 동작 — 콤보 응답 늦으면 raw 값 영구 손실
@@ -767,9 +767,9 @@ Def: { Row: { CanFocus: 1 }, Col: { CanEdit: 0 } }, // CanFocus 미설정 = defa
 
 근거: `references/ibsheet-official-manual/props/col/enum-strict-mode.md` — `0` (default) = 미설정 값 미적용, `1` = 적용(라벨 매핑 후속 가능), `2` = 적용 + Enum List 자동 추가.
 
-⚠️ **함정 — sheetOptions deps 만 갱신해서는 IBSheet 가 이미 그려진 셀에 새 Enum 을 적용 못 한다 → `setAttribute + renderBody` 명시 호출**
+⚠️ **함정 — sheetOptions deps 만 갱신해서는 IB Sheet 가 이미 그려진 셀에 새 Enum 을 적용 못 한다 → `setAttribute + renderBody` 명시 호출**
 
-`useMemo` deps 에 enum state 를 추가해도, IBSheet 는 createSheet 후 sheetOptions 변경을 자동 재반영하지 않는다. 콤보 응답 도착 시 명시적으로 셀 attribute 를 갱신해야 라벨이 채워진다.
+`useMemo` deps 에 enum state 를 추가해도, IB Sheet 는 createSheet 후 sheetOptions 변경을 자동 재반영하지 않는다. 콤보 응답 도착 시 명시적으로 셀 attribute 를 갱신해야 라벨이 채워진다.
 
 ```javascript
 // ✅ 콤보 state 변경 useEffect 에서 setAttribute (마지막 인자 0=즉시 렌더 안 함) + renderBody 한 번
@@ -810,7 +810,7 @@ augmentEnum(cntrEnum, [...new Set(rows.map(r => r.cntrCd).filter(Boolean))], set
 
 ⚠️ **함정 — Events 핸들러는 createSheet 시점 closure 캐시 → useState 직접 참조 시 빈 옵션 영구 고정**
 
-`Events.onAfterChange` 등은 IBSheet 인스턴스 생성 시점의 closure 로 영구 사용된다. 핸들러 안에서 `inspdptOptionsAll` (state) 를 직접 참조하면 **첫 렌더 시점의 빈 배열로 캐시**되어 옵션이 비동기 로드된 뒤에도 새 값을 못 본다. **`useRef` 동기화 패턴 필수**.
+`Events.onAfterChange` 등은 IB Sheet 인스턴스 생성 시점의 closure 로 영구 사용된다. 핸들러 안에서 `inspdptOptionsAll` (state) 를 직접 참조하면 **첫 렌더 시점의 빈 배열로 캐시**되어 옵션이 비동기 로드된 뒤에도 새 값을 못 본다. **`useRef` 동기화 패턴 필수**.
 
 ```javascript
 const inspdptOptionsAllRef = useRef(inspdptOptionsAll)
@@ -826,7 +826,7 @@ Events: {
 
 ⚠️ **함정 — `setAttribute` 객체 시그니처는 무시된다 → 포지셔널 `(row, col, attr, val, render)` 만 동작**
 
-`setAttribute({ col, attr, val, render })` 형식으로 호출하면 빌드/타입 통과 (any 캐스팅 시) 하지만 IBSheet8 내부 dispatcher 가 인식 못 함. silent fail — 컬럼 visible 토글이나 CanEdit 동적 토글이 화면에 반영 안 되는 회귀로 길게 헤맨다.
+`setAttribute({ col, attr, val, render })` 형식으로 호출하면 빌드/타입 통과 (any 캐스팅 시) 하지만 IBsheet 8 내부 dispatcher 가 인식 못 함. silent fail — 컬럼 visible 토글이나 CanEdit 동적 토글이 화면에 반영 안 되는 회귀로 길게 헤맨다.
 
 ```javascript
 // ❌ 객체 형식 — 무시됨
@@ -855,13 +855,13 @@ sheet.hideCol('fltmg')   // 숨김
 sheet.showCol('fltmg')   // 표시
 ```
 
-근거: `references/ibsheet-official-manual/funcs/core/hide-col.md` + `show-col.md`. IBSheet8 헤더는 `id==='Header'` row 로 모델링 → 컬럼 가시성은 dedicated 메서드로만 변경.
+근거: `references/ibsheet-official-manual/funcs/core/hide-col.md` + `show-col.md`. IBsheet 8 헤더는 `id==='Header'` row 로 모델링 → 컬럼 가시성은 dedicated 메서드로만 변경.
 
 > ⚠️ 특히 **autofit(`RelWidth` 자동주입) / 컨테이너 폭 비례 그리드**에서 `Width:0`(원본 `size=0` 직역)으로 숨기면 `RelWidth>0` 이 덮어써 ~39px 잔존(미숨김) — `hideCol` 이 더더욱 필수. (실측 — 체크박스 토글에 따라 컬럼을 동적으로 노출하는 그리드)
 
 ⚠️ **함정 — `Cfg.CanEdit:0` 초기화 + dynamic `setAttribute(CanEdit:1)` 전환 시 신규 행은 readonly 잔존**
 
-마운트 시 `Cfg.CanEdit:0` 으로 그리드 만든 후 enable state 변경에 따라 `setAttribute(null, undefined, 'CanEdit', 1, 0)` 로 풀어도 — **IBSheet8 가 내부 편집 모드를 비활성화 상태로 cache** 해 신규로 `addRow` 된 행도 readonly 잔존하는 회귀. AddEdit/ChangeEdit 도 함께 짝지어야 함.
+마운트 시 `Cfg.CanEdit:0` 으로 그리드 만든 후 enable state 변경에 따라 `setAttribute(null, undefined, 'CanEdit', 1, 0)` 로 풀어도 — **IBsheet 8 가 내부 편집 모드를 비활성화 상태로 cache** 해 신규로 `addRow` 된 행도 readonly 잔존하는 회귀. AddEdit/ChangeEdit 도 함께 짝지어야 함.
 
 ```javascript
 // ❌ Cfg.CanEdit:0 으로 시작 → useEffect 동적 토글 → 신규 행 readonly 잔존
@@ -887,11 +887,11 @@ useEffect(() => {
 }, [enable])
 ```
 
-**Why**: IBSheet8 의 편집 매트릭스는 CanEdit + AddEdit + ChangeEdit 3 키 조합 — `CanEdit:0` 초기값은 내부 dispatcher 가 "이 그리드는 영구 readonly" 로 단정 → 이후 `addRow` 된 Added 행에도 적용. AS-IS xfdl `readonly="true"` 와 동등하려면 **`Cfg.CanEdit:0` 고정** (동적 토글 없음), 동적 토글이 필요하면 **초기값 1 + useEffect 동적 0/1**.
+**Why**: IBsheet 8 의 편집 매트릭스는 CanEdit + AddEdit + ChangeEdit 3 키 조합 — `CanEdit:0` 초기값은 내부 dispatcher 가 "이 그리드는 영구 readonly" 로 단정 → 이후 `addRow` 된 Added 행에도 적용. AS-IS xfdl `readonly="true"` 와 동등하려면 **`Cfg.CanEdit:0` 고정** (동적 토글 없음), 동적 토글이 필요하면 **초기값 1 + useEffect 동적 0/1**.
 
 ⚠️ **함정 — `setAttribute(null, undefined, 'CanEdit', v)` 전역 호출이 컬럼 정의의 `CanEdit:0` / `CanEditFormula` 를 덮어쓴다 → 영구 readonly 컬럼이 편집 가능해짐**
 
-이력↔현재 토글 같은 **부분 readonly** 그리드 (= 일부 컬럼은 영구 readonly + 나머지는 토글) 에서 가장 자주 회귀하는 패턴. AS-IS xfdl 의 `expr:rowType==2?'combo':'none'` 같은 조건부 편집 컬럼을 IBSheet8 의 `CanEdit:0` / `CanEditFormula` 로 변환해놓아도, useEffect 의 전역 `setAttribute(null, undefined, 'CanEdit', 1)` 한 줄이 **모든 컬럼을 일괄 덮어써서** 영구 readonly 컬럼까지 편집 가능 상태가 된다. 사용자가 "검사명/검사코드 셀이 편집되는데?" 로 보고하면 99% 이 함정.
+이력↔현재 토글 같은 **부분 readonly** 그리드 (= 일부 컬럼은 영구 readonly + 나머지는 토글) 에서 가장 자주 회귀하는 패턴. AS-IS xfdl 의 `expr:rowType==2?'combo':'none'` 같은 조건부 편집 컬럼을 IBsheet 8 의 `CanEdit:0` / `CanEditFormula` 로 변환해놓아도, useEffect 의 전역 `setAttribute(null, undefined, 'CanEdit', 1)` 한 줄이 **모든 컬럼을 일괄 덮어써서** 영구 readonly 컬럼까지 편집 가능 상태가 된다. 사용자가 "검사명/검사코드 셀이 편집되는데?" 로 보고하면 99% 이 함정.
 
 ```javascript
 // ❌ 전역 setAttribute 한 줄 — Cols 정의의 CanEdit:0 / CanEditFormula 가 무효화됨
@@ -919,7 +919,7 @@ useEffect(() => {
 }, [srchDtBass, sheetReadyVersion])  // sheetReadyVersion: onRenderFirstFinish 에서 ++ (cold-open race)
 ```
 
-**Why**: IBSheet8 의 setAttribute 는 런타임 우선순위가 Cols 정의의 초기값보다 높다. `setAttribute(null, undefined, ...)` 의 `col=undefined` 는 "모든 컬럼" 의미 → 한 줄로 전체 그리드 컬럼의 해당 속성을 동기 덮어씀. `CanEditFormula` 도 마찬가지로 setAttribute(CanEdit=1) 가 들어오면 무력화. AS-IS 의 부분 readonly 의도는 React 변환 시 **편집 가능 / 영구 readonly 컬럼 list 를 별도 상수로 명시** 하고 useEffect 에서 3단계 순서로 적용해야 보존된다.
+**Why**: IBsheet 8 의 setAttribute 는 런타임 우선순위가 Cols 정의의 초기값보다 높다. `setAttribute(null, undefined, ...)` 의 `col=undefined` 는 "모든 컬럼" 의미 → 한 줄로 전체 그리드 컬럼의 해당 속성을 동기 덮어씀. `CanEditFormula` 도 마찬가지로 setAttribute(CanEdit=1) 가 들어오면 무력화. AS-IS 의 부분 readonly 의도는 React 변환 시 **편집 가능 / 영구 readonly 컬럼 list 를 별도 상수로 명시** 하고 useEffect 에서 3단계 순서로 적용해야 보존된다.
 
 **판정 신호**: 사용자가 "X 컬럼이 편집 안 되어야 하는데 편집됨" / "이력 모드면 정상인데 현재 모드 가니까 X도 풀려버림" 보고. 또는 직전 변환에서 `CanEdit:0` / `CanEditFormula` 박았는데 동작 안 함 — 100% 이 함정 (Cols 정의는 정확, useEffect 의 전역 호출이 덮어씀).
 
@@ -937,7 +937,7 @@ XFDL `displaytype="checkboxcontrol"` 등 사각 체크박스 의도로 변환한
 
 ⚠️ **함정 — Enum 컬럼 Width 가 좁으면 라벨이 잘려 빈 ▼ 만 보인다 (콤보 매핑 회귀로 오인)**
 
-한국어 4글자 라벨(예: "서울지점") + ▼ 표시는 **Width ≥ 100** 필요. AS-IS XFDL 의 작은 size 값을 그대로 옮기면 IBSheet8 의 폰트 메트릭 차이로 잘릴 수 있다. 잘림이 발견되면 매핑 회귀가 아니라 너비 부족 — 확대 캡쳐로 픽셀 검수 후 Width 확장.
+한국어 4글자 라벨(예: "서울지점") + ▼ 표시는 **Width ≥ 100** 필요. AS-IS XFDL 의 작은 size 값을 그대로 옮기면 IBsheet 8 의 폰트 메트릭 차이로 잘릴 수 있다. 잘림이 발견되면 매핑 회귀가 아니라 너비 부족 — 확대 캡쳐로 픽셀 검수 후 Width 확장.
 
 ⚠️ **함정 — 응답 placeholder 코드 `'-'` / `null` 처리**
 
@@ -962,7 +962,7 @@ data.forEach(row => {
 > ]
 > ```
 
-> **⚠ IBSheet7 → IBSheet8 migration**: Replace the old `Sum` / `SumType` / `SumAlign` / `SumFormat` column properties with a single `FormulaRow`. The column's own `Format` and `Align` are automatically applied to the formula cell — no need for `SumFormat` / `SumAlign`.
+> **⚠ IBsheet 7 → IBsheet 8 migration**: Replace the old `Sum` / `SumType` / `SumAlign` / `SumFormat` column properties with a single `FormulaRow`. The column's own `Format` and `Align` are automatically applied to the formula cell — no need for `SumFormat` / `SumAlign`.
 > ```js
 > // ❌ IBSheet7 leftover (verbose, may double-render rows)
 > { Name: "amount", Type: "Int", Format: "#,##0", Align: "Right",
@@ -986,7 +986,7 @@ Events: {
 ```
 
 > **Caution: Event Naming Convention**
-> IBSheet8 events use `Start↔Finish` and `Before↔After` patterns. **The `Start↔End` pattern is NOT used.**
+> IBsheet 8 events use `Start↔Finish` and `Before↔After` patterns. **The `Start↔End` pattern is NOT used.**
 > - `onSearchStart` ↔ `onSearchFinish` (O) — `onSearchEnd` does not exist (X)
 
 ⚠️ **함정 — `onStartEdit` return 값 규칙은 일반적 직관과 반대 (`true` = 편집 차단)**
@@ -1011,7 +1011,7 @@ onStartEdit: (evt) => {
 
 ⚠️ **함정 — 신규행만 편집 가능 컬럼은 `onStartEdit` 우회 금지, `AddEdit:1 + ChangeEdit:0` 가 정석**
 
-XFDL `edittype="expr:INSERT? normal : none"` 같은 행단위 동적 편집 패턴은 onStartEdit 이벤트 가드로 우회하지 말고 컬럼 옵션 `AddEdit/ChangeEdit` 으로 직접 표현. 이벤트 우회는 코드 복잡도만 늘리고 IBSheet8 가 매뉴얼대로 일관 처리하는 동작을 깨뜨릴 수 있다 (편집 매트릭스 전체 표는 `references/core/advanced-patterns.md` "편집 매트릭스" 섹션).
+XFDL `edittype="expr:INSERT? normal : none"` 같은 행단위 동적 편집 패턴은 onStartEdit 이벤트 가드로 우회하지 말고 컬럼 옵션 `AddEdit/ChangeEdit` 으로 직접 표현. 이벤트 우회는 코드 복잡도만 늘리고 IBsheet 8 가 매뉴얼대로 일관 처리하는 동작을 깨뜨릴 수 있다 (편집 매트릭스 전체 표는 `references/core/advanced-patterns.md` "편집 매트릭스" 섹션).
 
 ⚠️ **함정 — `Formula` 는 `Cfg.CanFormula + Cfg.CalcOrder` 없이는 호출 안 됨**
 
@@ -1037,7 +1037,7 @@ onAfterChange: (evt) => {
 
 ⚠️ **함정 — `addRow({ Init: {...} })` 대문자 `Init` 는 silent 무시 (컬럼값 안 들어감)**
 
-IBSheet8 의 표준 옵션 키는 **소문자 `init`**. 대문자 `Init` 는 옵션 객체에는 저장되지만 addRow 로직에서 인식 안 됨 → 컬럼값 전부 빈값으로 신규 행 생성. 사용자 신호: "신규행 추가 시 등록일자가 비어있음 / `recpYn` 같은 분기값이 안 들어감". 변환된 화면 전체가 소문자 `init` 사용. 회귀 사례 — 대문자로 작성된 신규 행이 모든 컬럼 빈값으로 들어가 backend 500 NPE 유발.
+IBsheet 8 의 표준 옵션 키는 **소문자 `init`**. 대문자 `Init` 는 옵션 객체에는 저장되지만 addRow 로직에서 인식 안 됨 → 컬럼값 전부 빈값으로 신규 행 생성. 사용자 신호: "신규행 추가 시 등록일자가 비어있음 / `recpYn` 같은 분기값이 안 들어감". 변환된 화면 전체가 소문자 `init` 사용. 회귀 사례 — 대문자로 작성된 신규 행이 모든 컬럼 빈값으로 들어가 backend 500 NPE 유발.
 
 ```javascript
 // ❌ 대문자 Init — silent 무시
@@ -1049,7 +1049,7 @@ sheet.addRow({ init: { faltRegDt: today, recpYn: 'Y' } })
 
 ⚠️ **함정 — `evt.val` TS 타입은 `unknown` — boolean 비교 시 `as unknown` 캐스트 필요**
 
-IBSheet8 v8 의 onAfterChange 이벤트 객체 정확한 키는 `evt.val`. `evt.value` 는 존재하지 않음 (TS2551). 또한 `evt.val` 의 TypeScript 타입은 `unknown` 이라 `string | number` 와 `boolean true` 비교 시 union mismatch (TS2367: "comparison appears to be unintentional"). `pnpm build` (= `tsc -b`) 의 strict 옵션에서만 노출되고 `tsc --noEmit` 은 통과.
+IBsheet 8 v8 의 onAfterChange 이벤트 객체 정확한 키는 `evt.val`. `evt.value` 는 존재하지 않음 (TS2551). 또한 `evt.val` 의 TypeScript 타입은 `unknown` 이라 `string | number` 와 `boolean true` 비교 시 union mismatch (TS2367: "comparison appears to be unintentional"). `pnpm build` (= `tsc -b`) 의 strict 옵션에서만 노출되고 `tsc --noEmit` 은 통과.
 
 ```typescript
 // ❌ evt.value (존재하지 않음) + boolean 비교 union mismatch
@@ -1070,14 +1070,14 @@ if (v === true || v === 1 || v === '1')
 ### Core References
 | Topic | File | Description |
 |-------|------|-------------|
-| IBSheet8 Creation | [references/core/initialize-basic.md](references/core/initialize-basic.md) | Basic ibsheet8 creation method |
-| Cfg Properties | [references/core/initialize-cfg-properties.md](references/core/initialize-cfg-properties.md) | IBSheet8 global configuration properties |
+| IBsheet 8 Creation | [references/core/initialize-basic.md](references/core/initialize-basic.md) | Basic IBsheet 8 creation method |
+| Cfg Properties | [references/core/initialize-cfg-properties.md](references/core/initialize-cfg-properties.md) | IBsheet 8 global configuration properties |
 | Col Properties | [references/core/initialize-column-properties.md](references/core/initialize-column-properties.md) | Column initialization properties |
 | Column Types | [references/core/column-type-property.md](references/core/column-type-property.md) | All column types and properties |
 | Column Formats | [references/core/column-format-property.md](references/core/column-format-property.md) | Cell display format definitions |
 | Events | [references/core/events.md](references/core/events.md) | Full event list and usage |
 | pagnation, Count Indicator| [references/core/pagnation-rowCountIndicator.md](references/core/pagnation-rowCountIndicator.md) | pagnation, row count indicator properties |
-| API Methods | [references/core/api-methods.md](references/core/api-methods.md) | IBSheet8 manipulation methods |
+| API Methods | [references/core/api-methods.md](references/core/api-methods.md) | IBsheet 8 manipulation methods |
 | **Advanced Patterns** | [references/core/advanced-patterns.md](references/core/advanced-patterns.md) | Focus/Selection, 행 추가/삭제, AddEdit/ChangeEdit, getSaveJson, 무한 스크롤, 변경 롤백, focus 이벤트 차단, Row Context Menu |
 
 ### Feature Guides
@@ -1104,7 +1104,7 @@ if (v === true || v === 1 || v === '1')
 | Topic | File | Description |
 |-------|------|-------------|
 | Common Errors | [references/troubleshooting/common-errors.md](references/troubleshooting/common-errors.md) | Error causes and solutions |
-| Playwright 셀 클릭 | [references/troubleshooting/playwright-cell-click.md](references/troubleshooting/playwright-cell-click.md) | Playwright/MCP 로 IBSheet 셀·버튼·콤보 클릭 (포커스 오버레이 `pointer-events:none` + trusted click + `data-pwtest` 마커). `intercepts pointer events` timeout 우회 |
+| Playwright 셀 클릭 | [references/troubleshooting/playwright-cell-click.md](references/troubleshooting/playwright-cell-click.md) | Playwright/MCP 로 IB Sheet 셀·버튼·콤보 클릭 (포커스 오버레이 `pointer-events:none` + trusted click + `data-pwtest` 마커). `intercepts pointer events` timeout 우회 |
 
 ## Templates
 
@@ -1125,15 +1125,15 @@ if (v === true || v === 1 || v === '1')
 - [assets/templates/framework/react-component.jsx](assets/templates/framework/react-component.jsx) - React component
 - [assets/templates/framework/vue-component.vue](assets/templates/framework/vue-component.vue) - Vue component
 
-## IBSheet8 공식 매뉴얼
+## IBsheet 8 공식 매뉴얼
 
-IBSheet8 전체 공식 매뉴얼이 `references/ibsheet-official-manual/` 경로에 있습니다. 위 Reference Guide에서 다루지 않는 상세 API, 속성, 이벤트, 스타일 가이드 등이 필요할 때 참고하세요.
+IBsheet 8 전체 공식 매뉴얼이 `references/ibsheet-official-manual/` 경로에 있습니다. 위 Reference Guide에서 다루지 않는 상세 API, 속성, 이벤트, 스타일 가이드 등이 필요할 때 참고하세요.
 
 ## Drag & Drop (트리 그리드)
 
 ### onEndDrag 이벤트 타이밍
 
-`onEndDrag`는 **드랍이 확정되기 전에 호출**될 수 있다. 핸들러 안에서 즉시 `getDataRows()`를 호출하면 이동 전 순서가 반환될 수 있으므로, 외부 데이터 소스와 동기화할 때는 `setTimeout(() => {...}, 0)`으로 감싸서 IBSheet 내부 처리 완료 후에 수행해야 한다.
+`onEndDrag`는 **드랍이 확정되기 전에 호출**될 수 있다. 핸들러 안에서 즉시 `getDataRows()`를 호출하면 이동 전 순서가 반환될 수 있으므로, 외부 데이터 소스와 동기화할 때는 `setTimeout(() => {...}, 0)`으로 감싸서 IB Sheet 내부 처리 완료 후에 수행해야 한다.
 
 ### onEndDrag evt.type
 
@@ -1188,9 +1188,9 @@ handleEndDragRef.current = (evt) => {
 ## Important Notes
 
 1. **Initialization Timing**: Call `IBSheet.create()` after `DOMContentLoaded` or after the container is rendered
-2. **Multiple IBSheet8 Instances**: Each ibsheet8 must have a unique ID (a global object is created based on the assigned ID)
-3. **Col Name**: All column Names within a single ibsheet8 must be unique
-4. **Event Context**: `this` inside event handlers refers to the ibsheet8 object
+2. **Multiple IBsheet 8 Instances**: Each IBsheet 8 must have a unique ID (a global object is created based on the assigned ID)
+3. **Col Name**: All column Names within a single IBsheet 8 must be unique
+4. **Event Context**: `this` inside event handlers refers to the IBsheet 8 object
 5. **Row Object**: Every row is a row object, not an index (number)
 6. **STATUS**: Uses Added, Changed, Deleted instead of I, U, D
 7. **Undeclared columns are dropped**: `loadSearchData` 응답에 포함되어도 `Cols` 에 선언되지 않은 컬럼 값은 행 객체에 보존되지 않는다. 화면에 표시 안 하지만 저장 payload 에 필요한 컬럼은 반드시 `Visible: 0` 으로 선언.
@@ -1198,7 +1198,7 @@ handleEndDragRef.current = (evt) => {
 
 ### 컬럼 숨김 — `Visible: 0` 만 작동 (Hidden 은 무시됨)
 
-> ⛔ **`Hidden: true` 는 IBSheet8 에서 인식되지 않는다**. 옵션 객체에는 그대로 저장되지만 렌더링 단계에서 무시되어 컬럼 헤더와 데이터가 화면에 그대로 노출된다. 과거 1회 사고: AS-IS 캡처와 비교 시 hidden 컬럼이 헤더에 영문 컬럼명(prflRqstSno, afilCd 등) 으로 그대로 보였다.
+> ⛔ **`Hidden: true` 는 IBsheet 8 에서 인식되지 않는다**. 옵션 객체에는 그대로 저장되지만 렌더링 단계에서 무시되어 컬럼 헤더와 데이터가 화면에 그대로 노출된다. 과거 1회 사고: AS-IS 캡처와 비교 시 hidden 컬럼이 헤더에 영문 컬럼명(prflRqstSno, afilCd 등) 으로 그대로 보였다.
 >
 > 정식 옵션은 **`Visible: 0`** (또는 `Visible: false`) — 공식 매뉴얼 `props/col/visible`. 컬럼 자체를 비가시 처리하면서 행 객체에는 값을 보존한다.
 
@@ -1216,7 +1216,7 @@ Cols: [
 ```
 
 증상 1 (Hidden 사용 시): AS-IS 에서는 5컬럼 그리드인데 TO-BE 에서는 hidden 컬럼이 모두 헤더에 노출되어 14~24 컬럼이 보임. 헤더 텍스트가 `prflRqstSno`, `afilCd` 같은 raw 컬럼명으로 표시.
-증상 2 (선언 누락 시): 저장 시 `ORA-01407: cannot update ... to NULL`. AS-IS Nexacro 페이로드에는 해당 컬럼이 들어 있지만 IBSheet 기반 TO-BE 페이로드에는 빠져 있다 (Nexacro NormalDataset 은 응답 컬럼을 자동 보유하는 반면 IBSheet 은 그렇지 않음).
+증상 2 (선언 누락 시): 저장 시 `ORA-01407: cannot update ... to NULL`. AS-IS Nexacro 페이로드에는 해당 컬럼이 들어 있지만 IB Sheet 기반 TO-BE 페이로드에는 빠져 있다 (Nexacro NormalDataset 은 응답 컬럼을 자동 보유하는 반면 IB Sheet 은 그렇지 않음).
 
 ### 그리드 가로폭 — 표준 = 글로벌 `FitWidth:1` + `RelWidth` 자동 주입
 
@@ -1226,7 +1226,7 @@ Cols: [
 
 → 화면 코드는 **`Width` 픽셀만 지정**하면 컨테이너 폭에 맞춰 자동 stretch 된다. `FitWidth`·`RelWidth` 를 화면에서 직접 적을 필요 없다.
 
-> ⛔ **`Cfg.FitColumns` 는 IBSheet8 에 없는 no-op 옵션 — 쓰지 마라.** 과거 이 문서가 "사실상 표준(102개 화면)" 으로 **잘못 기재**해 137개 화면에 전파됐고 2026-05 전량 제거. 폭 채움 표준은 위의 **FitWidth + RelWidth** 다 (FitColumns 아님).
+> ⛔ **`Cfg.FitColumns` 는 IBsheet 8 에 없는 no-op 옵션 — 쓰지 마라.** 과거 이 문서가 "사실상 표준(102개 화면)" 으로 **잘못 기재**해 137개 화면에 전파됐고 2026-05 전량 제거. 폭 채움 표준은 위의 **FitWidth + RelWidth** 다 (FitColumns 아님).
 
 ```javascript
 // ✅ Width 픽셀만 지정 — RelWidth 자동 주입이 컨테이너 폭에 맞춰 stretch (FitColumns 불필요)
@@ -1277,7 +1277,7 @@ raw 가 preset 과 다르면 `Extend` 로 preset 을 재사용하되 `DataFormat
 
 ### 셀 머지 — `Cfg.DataMerge: 1` + 컬럼별 `ColMerge: 0` 차단
 
-XFDL Grid `<Cell suppress="2"/"3"/>` 동작(같은 값 연속 행 세로 머지)을 IBSheet8 에서 재현. `Cfg.DataMerge: 1` 켜면 좌측부터 같은 값 연속 행이 자동 세로 머지. **머지 도중에 끊고 싶은 컬럼은 `ColMerge: 0` 명시**.
+XFDL Grid `<Cell suppress="2"/"3"/>` 동작(같은 값 연속 행 세로 머지)을 IBsheet 8 에서 재현. `Cfg.DataMerge: 1` 켜면 좌측부터 같은 값 연속 행이 자동 세로 머지. **머지 도중에 끊고 싶은 컬럼은 `ColMerge: 0` 명시**.
 
 ```javascript
 Cfg: { DataMerge: 1, ... },
@@ -1293,7 +1293,7 @@ Cols: [
 
 **Why**: `DataMerge:1` 은 좌측부터 연속 머지를 시도하는데, 머지가 필요 없는 컬럼(방문순번/사번/사원명 등 행별 별개)에 `ColMerge:0` 을 명시하지 않으면 같은 값이 우연히 인접할 때 의도치 않은 머지 발생. XFDL `suppress` 미명시 컬럼 = `ColMerge:0` 매핑이 정공.
 
-**How to apply**: XFDL `<Column>` 정의에서 `suppress="N"` 있는 컬럼은 IBSheet 에서 머지 ON (DataMerge:1 기본 적용), 없는 컬럼은 `ColMerge:0` 명시. 변환 사례: 고객별 계획 목록 (`custCd/custNm/planDt` 머지 + 나머지 차단), 등급 목록 (`lvlNm` 머지).
+**How to apply**: XFDL `<Column>` 정의에서 `suppress="N"` 있는 컬럼은 IB Sheet 에서 머지 ON (DataMerge:1 기본 적용), 없는 컬럼은 `ColMerge:0` 명시. 변환 사례: 고객별 계획 목록 (`custCd/custNm/planDt` 머지 + 나머지 차단), 등급 목록 (`lvlNm` 머지).
 
 ⚠️ **함정** — 원본 XFDL `<Cell suppress>` 가 한 개도 없는 화면에 `DataMerge:1` / `PrevColumnMerge:1` 이 박혀 있으면 사용자가 "동일 내용 행이 합쳐진다" 라고 보고 (사례: 목록 그리드 — 지역/지점/상태 컬럼의 동일값이 의도치 않게 자동 세로 병합). 원본에 머지 의도 없으면 두 옵션 모두 **제거**가 정답. `PrevColumnMerge:1` 은 한 행 내 좌→우 인접 동일값 컬럼 가로 머지 트리거 — 머지 의도 없으면 같이 OFF. XFDL→React 변환 시에는 원본의 `suppress` 속성 개수를 먼저 세어 머지 의도를 판정할 것.
 
@@ -1356,7 +1356,7 @@ exportToExcel(ref, { fileName, sheetName, downRows: undefined })
 
 ### 조회 후 9개 Bool 컬럼 헤더 체크 일괄 동기화 — `syncHeaderCheck()` 1줄 (AS-IS checkboxAllByColumn 루프 대체)
 
-AS-IS Nexacro 화면에서 `fn_apiCallback case "searchPrnt"` 안에 9개 Bool 컬럼별 `checkboxAllByColumn(key, cellIndex)` 9건 루프로 헤더 ⬜/☑ 텍스트를 수동 갱신하는 패턴이 보이면, IBSheet8 의 공식 API `sheet.syncHeaderCheck()` 한 줄로 통째로 대체된다.
+AS-IS Nexacro 화면에서 `fn_apiCallback case "searchPrnt"` 안에 9개 Bool 컬럼별 `checkboxAllByColumn(key, cellIndex)` 9건 루프로 헤더 ⬜/☑ 텍스트를 수동 갱신하는 패턴이 보이면, IBsheet 8 의 공식 API `sheet.syncHeaderCheck()` 한 줄로 통째로 대체된다.
 
 ```typescript
 // ❌ AS-IS Nexacro 패턴을 그대로 직역하지 말 것 — IBSheet7 시절 수동 구현
@@ -1375,19 +1375,19 @@ sheet.loadSearchData({ data: rows, sync: 1 })
 
 근거: `references/ibsheet-official-manual/funcs/core/sync-header-check.md` (Since 8.0.0.5). "HeaderCheck 가 선언된 모든 열에 대해 데이터 행의 값에 따라 헤더 체크를 동기화합니다".
 
-⚠️ **AS-IS 저장/삭제 후처리의 공통함수(예: `initCheckboxAll(grd)`) (헤더 _CHK 셀을 "0" 으로 리셋) 은 IBSheet8 에서 대개 불필요** — 저장 후 `loadSearchData`/`removeAll` 재로드나 삭제(removeRow/deleteRow) 시 `HeaderCheck` 가 행 기준으로 자동 재계산되기 때문. 명시 갱신이 필요하면 `syncHeaderCheck()`. **`setHeaderCheck(col, 0)` 은 IBSheet7 API 라 IBSheet8 에선 no-op** (`(sheet as any).setHeaderCheck?.()` 로 써도 조용히 무동작 — 죽은 코드. IBSheet8 등가는 `setAttribute(headerRow, col, "Checked", 0)`, 단 자동 재계산이라 호출 자체가 불필요). 사례: 저장/삭제 후처리에서 자동 재계산에만 의존.
+⚠️ **AS-IS 저장/삭제 후처리의 공통함수(예: `initCheckboxAll(grd)`) (헤더 _CHK 셀을 "0" 으로 리셋) 은 IBsheet 8 에서 대개 불필요** — 저장 후 `loadSearchData`/`removeAll` 재로드나 삭제(removeRow/deleteRow) 시 `HeaderCheck` 가 행 기준으로 자동 재계산되기 때문. 명시 갱신이 필요하면 `syncHeaderCheck()`. **`setHeaderCheck(col, 0)` 은 IBsheet 7 API 라 IBsheet 8 에선 no-op** (`(sheet as any).setHeaderCheck?.()` 로 써도 조용히 무동작 — 죽은 코드. IBsheet 8 등가는 `setAttribute(headerRow, col, "Checked", 0)`, 단 자동 재계산이라 호출 자체가 불필요). 사례: 저장/삭제 후처리에서 자동 재계산에만 의존.
 
-### 헤더 클릭 → 컬럼 전체 토글은 IBSheet8 default behavior (별도 핸들러 불필요)
+### 헤더 클릭 → 컬럼 전체 토글은 IBsheet 8 default behavior (별도 핸들러 불필요)
 
-AS-IS 의 `div_main_grd_list_onheadclick` 같은 핸들러로 헤더 셀 클릭 시 현재 ⬜/☑ 상태에 따라 모든 row 의 컬럼 값을 'Y'/'N' 으로 일괄 setColumn 하는 패턴은 **IBSheet7 의 수동 구현**. IBSheet8 에서는 `Header: { Value: '', HeaderCheck: 1 }` 만 선언해도 헤더 체크박스가 자동으로 클릭 → 전체 row 값 토글 + 헤더 상태 갱신을 양방향 처리.
+AS-IS 의 `div_main_grd_list_onheadclick` 같은 핸들러로 헤더 셀 클릭 시 현재 ⬜/☑ 상태에 따라 모든 row 의 컬럼 값을 'Y'/'N' 으로 일괄 setColumn 하는 패턴은 **IBsheet 7 의 수동 구현**. IBsheet 8 에서는 `Header: { Value: '', HeaderCheck: 1 }` 만 선언해도 헤더 체크박스가 자동으로 클릭 → 전체 row 값 토글 + 헤더 상태 갱신을 양방향 처리.
 
-근거: `references/integration/IBSheet7_to_IBSheet8_guide.md` line 166 — "HeaderCheckSync — Always synced — Default behavior in IBSheet8".
+근거: `references/integration/IBSheet7_to_IBSheet8_guide.md` line 166 — "HeaderCheckSync — Always synced — Default behavior in IBsheet 8".
 
-따라서 IBSheet8 마이그레이션에서는 onHeaderClick 핸들러를 옮길 필요 없고, `HeaderCheck:1` 만 보장하면 끝. 양방향 동기화는 위의 `syncHeaderCheck()` 호출 한 번으로 완성 사이클을 닫는다 (조회 직후 헤더 초기 상태 갱신).
+따라서 IBsheet 8 마이그레이션에서는 onHeaderClick 핸들러를 옮길 필요 없고, `HeaderCheck:1` 만 보장하면 끝. 양방향 동기화는 위의 `syncHeaderCheck()` 호출 한 번으로 완성 사이클을 닫는다 (조회 직후 헤더 초기 상태 갱신).
 
 ### 그리드 위에 toolbar 추가 시 부모 height 측정 차단 — `flex flex-col` + `flexShrink:0`
 
-IBSheet 가 들어있는 wrapper 아래/위에 다른 UI 영역 (일괄 적용 toolbar / 상단 액션 버튼 등) 을 추가할 때, 단순히 형제 div 로 두면 IBSheet 의 부모 height 가 동적이 되어 마운트 시점에 0×0 측정되는 회귀가 잘 발생한다 (실제 회귀 사례와 동일 원인).
+IB Sheet 가 들어있는 wrapper 아래/위에 다른 UI 영역 (일괄 적용 toolbar / 상단 액션 버튼 등) 을 추가할 때, 단순히 형제 div 로 두면 IB Sheet 의 부모 height 가 동적이 되어 마운트 시점에 0×0 측정되는 회귀가 잘 발생한다 (실제 회귀 사례와 동일 원인).
 
 ```tsx
 // ✅ wrapper 를 flex flex-col + min-h-0 로
@@ -1407,7 +1407,7 @@ IBSheet 가 들어있는 wrapper 아래/위에 다른 UI 영역 (일괄 적용 t
 
 ### 동적 헤더 텍스트 변경 — `setHeader` / `setColumnVisible` 은 존재하지 않는 API (silent fail)
 
-조회 조건(년월/구분 등) 에 따라 그리드 헤더 문구가 바뀌는 화면에서 `sheet.setHeader(...)` / `sheet.setColumnVisible(...)` 를 호출하면 **에러도 안 나고 동작도 안 한다** — IBSheet8 API 명세에 없는 메서드. TypeScript 가 `any` 로 빠지면 빌드도 통과해 디버깅이 길어진다.
+조회 조건(년월/구분 등) 에 따라 그리드 헤더 문구가 바뀌는 화면에서 `sheet.setHeader(...)` / `sheet.setColumnVisible(...)` 를 호출하면 **에러도 안 나고 동작도 안 한다** — IBsheet 8 API 명세에 없는 메서드. TypeScript 가 `any` 로 빠지면 빌드도 통과해 디버깅이 길어진다.
 
 ```javascript
 // ❌ 존재하지 않는 API — silent fail
@@ -1422,7 +1422,7 @@ sheet.hideCol('amt2')   // 숨김
 sheet.showCol('amt2')   // 보임
 ```
 
-**Why**: IBSheet8 의 헤더는 별도 API 영역이 아니라 `id === 'Header'` 인 row 로 모델링되어 있다. 컬럼 가시성도 `Visible` 옵션 변경이 아니라 dedicated `hideCol`/`showCol` 메서드로 변경한다 (`funcs/core/hide-col.md`, `funcs/core/show-col.md`).
+**Why**: IBsheet 8 의 헤더는 별도 API 영역이 아니라 `id === 'Header'` 인 row 로 모델링되어 있다. 컬럼 가시성도 `Visible` 옵션 변경이 아니라 dedicated `hideCol`/`showCol` 메서드로 변경한다 (`funcs/core/hide-col.md`, `funcs/core/show-col.md`).
 
 근거: `references/ibsheet-official-manual/funcs/core/hide-col.md`, `show-col.md`. `setHeader` / `setColumnVisible` 는 공식 매뉴얼 어디에도 없음.
 
@@ -1461,7 +1461,7 @@ Nexacro `<Cell colspan="3" text="문서번호"/>` (서브라벨 없는 단일행
 ✅ { Name:'docNo2', Header:t('grid.docNo') }               // 단일행, 인접 동일문자열 가로병합
 ```
 
-⚠️ **변종 — `Header` 에 파이프 문자열 `'그룹|서브'` 를 주면 IBSheet8 가 split 안 함 → 헤더에 raw Name(ctf 등) fallback** + **`Cfg.HeaderMerge` 누락 시 배열 Header 도 Name fallback** (1차/2차 colspan 미병합 + 공통컬럼 rowspan 미병합). 2단 헤더는 **반드시 배열** + `HeaderMerge:3`(열 우선 1+2: 공통컬럼 `['No','No']` 세로병합 + 그룹 가로병합). 헬퍼가 `Header:header`(string)면 `header.split('|')` 로 배열화. 선례: 2단 헤더 그리드 (`sprtCol('ctf','1차|C(t)')` 파이프 → ctf 노출 + HeaderMerge 누락으로 1차 컬럼마다 반복).
+⚠️ **변종 — `Header` 에 파이프 문자열 `'그룹|서브'` 를 주면 IBsheet 8 가 split 안 함 → 헤더에 raw Name(ctf 등) fallback** + **`Cfg.HeaderMerge` 누락 시 배열 Header 도 Name fallback** (1차/2차 colspan 미병합 + 공통컬럼 rowspan 미병합). 2단 헤더는 **반드시 배열** + `HeaderMerge:3`(열 우선 1+2: 공통컬럼 `['No','No']` 세로병합 + 그룹 가로병합). 헬퍼가 `Header:header`(string)면 `header.split('|')` 로 배열화. 선례: 2단 헤더 그리드 (`sprtCol('ctf','1차|C(t)')` 파이프 → ctf 노출 + HeaderMerge 누락으로 1차 컬럼마다 반복).
 ```js
 ❌ const sprtCol=(n,h)=>({ Header:h, Name:n })  ; sprtCol('ctf','1차|C(t)')   // 헤더에 'ctf'
 ✅ const sprtCol=(n,h)=>({ Header:h.split('|'), Name:n }) ; Cfg:{ HeaderMerge:3 }  // 1차│C(t)
@@ -1471,7 +1471,7 @@ Nexacro `<Cell colspan="3" text="문서번호"/>` (서브라벨 없는 단일행
 
 ### `Format` 의 4-section 문자열 — `'positive;negative;zero;null'` (0/null 빈 셀 표시)
 
-원본 Nexacro 의 수량/금액 컬럼은 0 / null 값을 **빈 셀로** 표시하는 경우가 많다 (sum 행만 0 표시, 데이터 행은 공란). IBSheet8 `Format` 토큰은 Excel 호환 `positive;negative;zero;null` 4 섹션 문법을 지원하므로, **마지막 두 섹션을 빈 문자열로** 두면 0/null 이 자동 빈 셀.
+원본 Nexacro 의 수량/금액 컬럼은 0 / null 값을 **빈 셀로** 표시하는 경우가 많다 (sum 행만 0 표시, 데이터 행은 공란). IBsheet 8 `Format` 토큰은 Excel 호환 `positive;negative;zero;null` 4 섹션 문법을 지원하므로, **마지막 두 섹션을 빈 문자열로** 두면 0/null 이 자동 빈 셀.
 
 ```javascript
 // ❌ 단일 섹션 — 0 값이 '0' 으로 그대로 보임
@@ -1493,7 +1493,7 @@ Nexacro `<Cell colspan="3" text="문서번호"/>` (서브라벨 없는 단일행
 { Name: 'rate', Type: 'Float', Format: '#,##0.00;-#,##0.00;;' }
 ```
 
-**Why**: IBSheet8 `Format` 은 내부적으로 Excel 호환 `;` 구분 4 섹션 파서를 사용. 섹션 누락 시:
+**Why**: IBsheet 8 `Format` 은 내부적으로 Excel 호환 `;` 구분 4 섹션 파서를 사용. 섹션 누락 시:
 - 1 섹션만 (`'#,##0'`) → 모든 값에 동일 형식 적용 (0 은 `'0'` 표시)
 - 2 섹션 (`'#,##0;-#,##0'`) → positive/negative 만 분기, zero/null 은 positive 적용
 - 3 섹션 → positive/negative/zero 분기, null 은 빈 셀 (Type 별 기본)
@@ -1506,13 +1506,13 @@ Nexacro `<Cell colspan="3" text="문서번호"/>` (서브라벨 없는 단일행
 
 근거: `references/core/column-format-property.md` "4-section format string". Excel `;` 구분 문법과 동일.
 
-### IBSheet 영역 HTML→PNG 캡처 — `font-family` fallback 깨짐 함정
+### IB Sheet 영역 HTML→PNG 캡처 — `font-family` fallback 깨짐 함정
 
-화면캡처 (html-to-image / html2canvas 등 foreignObject SVG 기반) 으로 IBSheet 가 포함된 영역을 PNG 로 떨굴 때 **그리드 셀의 글자만 통째로 누락**되고 격자/배경만 잡히는 사고가 발생한다. canvas 미사용 / input.value 미사용 / transform3d 미사용 / color cascade 정상이라 원인을 찾기 어렵다.
+화면캡처 (html-to-image / html2canvas 등 foreignObject SVG 기반) 으로 IB Sheet 가 포함된 영역을 PNG 로 떨굴 때 **그리드 셀의 글자만 통째로 누락**되고 격자/배경만 잡히는 사고가 발생한다. canvas 미사용 / input.value 미사용 / transform3d 미사용 / color cascade 정상이라 원인을 찾기 어렵다.
 
-**진짜 원인**: IBSheet 의 기본 font-family chain 첫 family 가 `"Noto Sans CJK kr"` 인데 (`appx/design.md` L62 `.IBMain{font-family:'Noto Sans CJK kr',...}` 참고), 이 family 는 `document.fonts` 에 **등록되지 않은 미존재 폰트**다. 화면에서는 브라우저가 두 번째 `"Noto Sans KR"` 로 자동 fallback 해서 정상이지만, html-to-image 의 foreignObject SVG 변환 시점에는 SVG 안에서 fallback 일관성이 깨져 첫 폰트의 빈 글리프로 렌더링 → 글자 누락.
+**진짜 원인**: IB Sheet 의 기본 font-family chain 첫 family 가 `"Noto Sans CJK kr"` 인데 (`appx/design.md` L62 `.IBMain{font-family:'Noto Sans CJK kr',...}` 참고), 이 family 는 `document.fonts` 에 **등록되지 않은 미존재 폰트**다. 화면에서는 브라우저가 두 번째 `"Noto Sans KR"` 로 자동 fallback 해서 정상이지만, html-to-image 의 foreignObject SVG 변환 시점에는 SVG 안에서 fallback 일관성이 깨져 첫 폰트의 빈 글리프로 렌더링 → 글자 누락.
 
-✅ 해법 — 캡처 직전 IBSheet wrapper(`[class*="IBGY"]`) 의 모든 자식 element 의 `style.fontFamily` 를 등록된 폰트로 inline 강제 override, 캡처 후 원복:
+✅ 해법 — 캡처 직전 IB Sheet wrapper(`[class*="IBGY"]`) 의 모든 자식 element 의 `style.fontFamily` 를 등록된 폰트로 inline 강제 override, 캡처 후 원복:
 
 ```ts
 const FALLBACK_FONT = '"Noto Sans KR","Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif'
@@ -1545,7 +1545,7 @@ try {
 - `pixelRatio: 2` + `width/height` 명시 (getBoundingClientRect 측정)
 - `cacheBust: true` + `skipFonts: false`
 - **html2canvas 1.4.1 은 Tailwind v4 의 `oklch()` 컬러 함수를 parse 실패해 throw**. 프로젝트는 Tailwind v4 사용이므로 화면캡처는 **html-to-image** 가 안전.
-- IBSheet 컬럼 폭이 매우 많아진 화면(예: `Visible:0` hidden 컬럼 다수) 은 2회 캡처 + foreignObject 직렬화에 수십 초 소요 — `useLoading.run(asyncFn, t('message.capturing'))` 으로 사용자 입력 block + 진행 표시 필수.
+- IB Sheet 컬럼 폭이 매우 많아진 화면(예: `Visible:0` hidden 컬럼 다수) 은 2회 캡처 + foreignObject 직렬화에 수십 초 소요 — `useLoading.run(asyncFn, t('message.capturing'))` 으로 사용자 입력 block + 진행 표시 필수.
 
 ## Cfg.SearchMode 정책
 
@@ -1571,13 +1571,13 @@ Master/Detail · 행 편집/추가/삭제 · 무한 스크롤 · Row Context Men
 - **무한 스크롤**: `loadSearchData({ append:1 })` + `onVScrollEndPoint` + `onScroll` 폴백 표준 패턴
 - **변경 롤백**: `reset()` 없음 — `revertRow`/`revertData`/`removeRow`/`acceptChangedData` 용도별 매트릭스
 - **focus + 이벤트 차단**: `removeRow` 자동 포커스 이동 → `onBeforeFocus` 재발화 / `focus(..., ignoreEvent=1)` 는 `onFocus` 까지 차단 함정 / **bypass 플래그** 패턴
-- **Master/Detail 흐름**: 자식 `onSearchFinish` 후 부모 포커스 복귀, IBSheet 인덱스 vs 외부 Dataset 매칭
+- **Master/Detail 흐름**: 자식 `onSearchFinish` 후 부모 포커스 복귀, IB Sheet 인덱스 vs 외부 Dataset 매칭
 - **Row Context Menu**: `Def.Row.Menu.Items` + `OnSave` 콜백, React 외부 콜백 한계 (전역 store + Host 패턴)
 
 
 ## `Type:'Enum'` 컬럼 — `Enum` / `EnumKeys` 문자열 leading `|` 필수
 
-`Type:'Enum'` 컬럼이 데이터 코드와 매칭 안 되어 **셀이 공백으로 출력**되면 leading `|` 누락이 99% 원인. IBSheet8 의 Enum 은 `|` 로 split 한 첫 슬롯을 "빈 값/기본" 으로 예약. leading `|` 없으면 첫 키가 빈슬롯 자리로 들어가 **실제 코드와 1칸씩 어긋남** → 매칭 실패.
+`Type:'Enum'` 컬럼이 데이터 코드와 매칭 안 되어 **셀이 공백으로 출력**되면 leading `|` 누락이 99% 원인. IBsheet 8 의 Enum 은 `|` 로 split 한 첫 슬롯을 "빈 값/기본" 으로 예약. leading `|` 없으면 첫 키가 빈슬롯 자리로 들어가 **실제 코드와 1칸씩 어긋남** → 매칭 실패.
 
 ❌ 셀 공백 (leading `|` 누락):
 ```typescript
@@ -1606,7 +1606,7 @@ items.length > 0
 
 ⚠️ **함정 — leading `|` 비대칭 (한쪽만 누락) → 드롭다운이 가로 한 줄로 모든 옵션 합쳐 보임**
 
-`Enum` 과 `EnumKeys` **둘 중 하나에만** leading `|` 가 있고 다른 쪽이 누락된 경우, IBSheet8 가 누락 쪽의 첫 글자(예 `'선'`)를 separator 로 잡아 전체 문자열을 ONE label 로 인식 → 드롭다운 열어보면 모든 옵션이 가로로 한 줄에 `|` 로 구분된 상태의 단일 라벨로 보임.
+`Enum` 과 `EnumKeys` **둘 중 하나에만** leading `|` 가 있고 다른 쪽이 누락된 경우, IBsheet 8 가 누락 쪽의 첫 글자(예 `'선'`)를 separator 로 잡아 전체 문자열을 ONE label 로 인식 → 드롭다운 열어보면 모든 옵션이 가로로 한 줄에 `|` 로 구분된 상태의 단일 라벨로 보임.
 
 ❌ Enum 에 leading `|` 누락 (msgDiv:'S' 빈값 옵션이 mdumOptions[0] 로 prepend 된 상태에서 단순 join):
 ```typescript
@@ -1640,7 +1640,7 @@ const keysStr  = `|${reals.map(c => c.value).join('|')}`   // '|BAP|MAC|...'
 
 ## `Formula` 가 참조하는 보조 컬럼 — `Cols` 에 hidden 으로 반드시 명시
 
-`Formula: (p) => p.Row.X + p.Row.Y` 의 `X` / `Y` 가 데이터(row) 에 들어왔어도, **IBSheet `Cols` 에 정의되지 않으면 `p.Row` 객체에 키 자체가 없다** → `undefined` 출력.
+`Formula: (p) => p.Row.X + p.Row.Y` 의 `X` / `Y` 가 데이터(row) 에 들어왔어도, **IB Sheet `Cols` 에 정의되지 않으면 `p.Row` 객체에 키 자체가 없다** → `undefined` 출력.
 
 ❌ "0 / 200" 이어야 하는데 "0 / " 만 출력 (maxItmCnt 가 Cols 누락):
 ```typescript
@@ -1664,11 +1664,11 @@ Cols: [
 
 판정 신호: Formula 출력이 부분만 표시되거나 `undefined` / 빈 문자열 노출 → `Cols` 에 hidden 컬럼 누락 확인.
 
-## ⚠ 셀 tooltip 정공 키는 `Tip` — `Tooltip` / `TooltipFormula` 는 IBSheet8 에 없는 가짜 키
+## ⚠ 셀 tooltip 정공 키는 `Tip` — `Tooltip` / `TooltipFormula` 는 IBsheet 8 에 없는 가짜 키
 
-XFDL `tooltiptext="bind:{col}"` 변환 시 자주 발견되는 함정. `Tooltip:1` / `TooltipFormula` 같은 키를 컬럼 옵션에 넣어도 IBSheet8 은 silent 무시. d.ts ([@ibsheet/interface/ib-interface.d.ts](node_modules/@ibsheet/interface/ib-interface.d.ts)) 검색 시 `Tooltip` 키워드 자체가 없음.
+XFDL `tooltiptext="bind:{col}"` 변환 시 자주 발견되는 함정. `Tooltip:1` / `TooltipFormula` 같은 키를 컬럼 옵션에 넣어도 IBsheet 8 은 silent 무시. d.ts ([@ibsheet/interface/ib-interface.d.ts](node_modules/@ibsheet/interface/ib-interface.d.ts)) 검색 시 `Tooltip` 키워드 자체가 없음.
 
-❌ 가짜 — `Tooltip` 컬럼 옵션 (IBSheet8 표준 아님, silent 무동작):
+❌ 가짜 — `Tooltip` 컬럼 옵션 (IBsheet 8 표준 아님, silent 무동작):
 ```typescript
 { Name: 'fltmg', Type: 'Lines', Tooltip: 1 }
 { Name: 'fltmg', Type: 'Lines', TooltipFormula: (fr) => fr.Row.fltmg }
@@ -1691,13 +1691,13 @@ XFDL `tooltiptext="bind:{col}"` 변환 시 자주 발견되는 함정. `Tooltip:
 
 판정 신호:
 - XFDL `tooltiptext="bind:col"` 매핑 후 hover 해도 tooltip 안 뜨면 → `Tooltip` 키 사용 의심. `Tip` 로 변경.
-- IBSheet8 d.ts 에서 옵션 키 확인 습관: `grep -i {keyword}` 로 실제 존재 여부 검증.
+- IBsheet 8 d.ts 에서 옵션 키 확인 습관: `grep -i {keyword}` 로 실제 존재 여부 검증.
 
 > ⚠ **실제 인시던트**: 두 화면의 변환 작업에서 5컬럼에 `Tooltip:1` (그 후 `TooltipFormula`) 를 잘못 사용해 그대로 커밋됨. d.ts 미검증으로 발생한 회귀.
 
-## ⚠ `display:none` 컨테이너 내 IBSheet mount → row height 계산 무효 (탭 전환 함정)
+## ⚠ `display:none` 컨테이너 내 IB Sheet mount → row height 계산 무효 (탭 전환 함정)
 
-탭 UI 에서 비활성 탭 내용을 `display:none` 으로 숨긴 상태에서 IBSheet 가 mount 되면 sheet container 의 `clientWidth / clientHeight = 0` 으로 시작. `Type:'Lines' + AutoRowHeight:1` 같은 자동 계산이 무효화되어 행이 잘려보임.
+탭 UI 에서 비활성 탭 내용을 `display:none` 으로 숨긴 상태에서 IB Sheet 가 mount 되면 sheet container 의 `clientWidth / clientHeight = 0` 으로 시작. `Type:'Lines' + AutoRowHeight:1` 같은 자동 계산이 무효화되어 행이 잘려보임.
 
 ❌ 함정 — 탭 활성화 후에도 자동 재계산 안 함:
 ```jsx
@@ -1735,10 +1735,10 @@ useEffect(() => {
 ```ts
 fitSize(col: string | { col: string; norender?: boolean; rows?: IBRow[] }, ...): void
 ```
-**`fitSize` 는 `col`(컬럼) 인자가 필수** 인 "특정 컬럼 기준 row height 자동맞춤" 메서드이지 컨테이너 폭/크기 맞춤이 아니다. 인자 없이 `fitSize()` 를 호출하면 IBSheet 가 **자체 에러 팝업** `오류 : 'fitSize' 함수에서 오류가 발생하였습니다` 를 띄운다. 이 팝업은 IBSheet 내부에서 발생하므로 **`try { } catch {}` 로도 막을 수 없다** (호출 자체를 하면 안 됨).
+**`fitSize` 는 `col`(컬럼) 인자가 필수** 인 "특정 컬럼 기준 row height 자동맞춤" 메서드이지 컨테이너 폭/크기 맞춤이 아니다. 인자 없이 `fitSize()` 를 호출하면 IB Sheet 가 **자체 에러 팝업** `오류 : 'fitSize' 함수에서 오류가 발생하였습니다` 를 띄운다. 이 팝업은 IB Sheet 내부에서 발생하므로 **`try { } catch {}` 로도 막을 수 없다** (호출 자체를 하면 안 됨).
 
 - 컨테이너/탭 재계산은 **`resize()`** (+필요시 `renderBody()`) 사용.
-- **브라우저(window) 리사이즈는 IBSheet8 이 네이티브로 처리** — `style={{width:'100%',height:'100%'}}` 인 fill 컨테이너(MDI M 모드 등)에서는 창을 줄이/늘리면 그리드가 자동 재배치된다(검증: 1500→table1445, 1000→table945). **별도 `ResizeObserver`/window resize 핸들러를 직접 달 필요 없다** (괜히 달면 위 fitSize 에러까지 유발).
+- **브라우저(window) 리사이즈는 IBsheet 8 이 네이티브로 처리** — `style={{width:'100%',height:'100%'}}` 인 fill 컨테이너(MDI M 모드 등)에서는 창을 줄이/늘리면 그리드가 자동 재배치된다(검증: 1500→table1445, 1000→table945). **별도 `ResizeObserver`/window resize 핸들러를 직접 달 필요 없다** (괜히 달면 위 fitSize 에러까지 유발).
 
 ### MDI B/M 모드 — B 모드 화면 "고정폭" 은 버그 아님
 

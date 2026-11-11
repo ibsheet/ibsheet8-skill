@@ -1,11 +1,13 @@
-# IBSheet8 Skill for Claude Code
+# IBsheet 8 Skill
 
-[IBSheet8](https://www.ibsheet.com) 그리드 개발용 [Claude Code](https://claude.com/claude-code) 스킬입니다.
-설치하면 Claude 가 IBSheet8 관련 작업을 할 때 이 가이드를 자동으로 참조합니다.
+[**IBsheet 8**](https://www.ibsheet.com)(웹 데이터 그리드) 개발용 AI 코딩 도구 스킬입니다. [Claude Code](https://claude.com/claude-code)를 비롯해 [Agent Skills](https://agentskills.io) 형식을 지원하는 AI 코딩 도구에서 쓸 수 있습니다.
+설치하면 AI가 IBsheet 8 관련 작업을 할 때 이 가이드를 자동으로 참조합니다.
+
+> English summary: An Agent Skill for IBsheet 8, a JavaScript data grid. It works in Claude Code and other AI coding tools that support the Agent Skills format. It bundles the core API (`Cfg` / `Cols` / `Events`, `loadSearchData`, `getSaveJson`), known pitfalls with fixes, 9 templates and the official manual (1,100+ pages).
 
 `Cfg`/`Cols`/`Events` 옵션 구조, `loadSearchData`/`getSaveJson` 같은 핵심 API,
 컬럼 타입별 주의사항, 편집 매트릭스, 이벤트 타이밍, 그리고 실제 개발에서 자주 밟는
-함정과 그 해결책을 담고 있습니다. IBSheet8 공식 매뉴얼 전문도 함께 포함되어 있어
+함정과 그 해결책을 담고 있습니다. IBsheet 8 공식 매뉴얼 전문도 함께 포함되어 있어
 상세 API 를 찾아볼 때 별도 검색 없이 참조됩니다.
 
 ---
@@ -34,6 +36,20 @@ git clone https://github.com/ibsheet/ibsheet8-skill.git "$env:USERPROFILE\.claud
 
 설치 후 Claude Code 를 재시작하면 `/ibsheet8` 로 직접 호출할 수 있고,
 아래 상황에서는 Claude 가 스스로 로드합니다.
+
+## 다른 AI 코딩 도구에서 쓰기
+
+이 저장소는 [Agent Skills](https://agentskills.io) 형식(`SKILL.md`)입니다. Agent Skills를 지원하는 AI 코딩 도구라면 그 도구의 skills 폴더에 같은 방식으로 복제해 씁니다. 폴더 위치는 도구마다 다르니 각 도구의 문서를 확인하세요.
+
+## MCP 서버와 함께 쓰기
+
+스킬은 설치한 시점의 매뉴얼을 담고 있습니다. 최신 매뉴얼은 IBsheet 8 공식 MCP 서버로 조회할 수 있습니다 (별도 키 · 로그인 불필요).
+
+```bash
+claude mcp add --transport http ibsheet8 https://mcp.ibsheet.com/mcp
+```
+
+Cursor · VS Code(GitHub Copilot) 등 다른 도구 설정은 https://docs.ibsheet.com/ibsheet/v8/manual/docs/start/mcp.html
 
 ## 언제 자동으로 동작하나
 
@@ -64,8 +80,8 @@ SKILL.md                          스킬 본문 — 핵심 API + 함정 모음
 |------|------|
 | **Core** | 초기화(기본 / Cfg / 컬럼), 컬럼 Type·Format 속성, 이벤트 전체 목록, API 메서드, 페이징·건수 표시, 고급 패턴 |
 | **Features** | 그룹핑, FormulaRow·SubTotal, 피벗, 수식, Attribute Formula, 트리 그리드, 틀고정·셀병합, Excel/PDF Export·Import, 입력값 검증, `window.IBSheet.Plugins` 커스텀 메서드 |
-| **Integration** | React 컴포넌트화, Vue 컴포넌트화, IBSheet7 → IBSheet8 전환 가이드 |
-| **Troubleshooting** | 초기화·데이터·이벤트·메모리·스타일·통신 오류별 원인과 해결, Playwright/MCP 로 IBSheet 셀·버튼·콤보 클릭하기 |
+| **Integration** | React 컴포넌트화, Vue 컴포넌트화, IBsheet 7 → IBsheet 8 전환 가이드 |
+| **Troubleshooting** | 초기화·데이터·이벤트·메모리·스타일·통신 오류별 원인과 해결, Playwright/MCP 로 IB Sheet 셀·버튼·콤보 클릭하기 |
 
 ### 템플릿
 
@@ -95,8 +111,8 @@ SKILL.md                          스킬 본문 — 핵심 API + 함정 모음
 - 공식 문서: <https://docs.ibsheet.com>
 - 제품 소개: <https://www.ibsheet.com>
 
-IBSheet8 은 상용 제품으로, 사용에는 별도 라이선스가 필요합니다.
-`references/ibsheet-official-manual/` 의 매뉴얼 문서 저작권은 IBSheet 에 있습니다.
+IBsheet 8 은 상용 제품으로, 사용에는 별도 라이선스가 필요합니다.
+`references/ibsheet-official-manual/` 의 매뉴얼 문서 저작권은 IB Sheet 에 있습니다.
 
 ## 기여
 
